@@ -1,0 +1,2 @@
+class SettlementLot < ApplicationRecord
+end

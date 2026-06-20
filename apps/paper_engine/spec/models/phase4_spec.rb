@@ -1,91 +1,71 @@
 require 'rails_helper'
 
-RSpec.describe "Phase 4 Margin Engine & RMS", type: :model do
-  let!(:runtime) { Runtime.create!(name: "Test", mode: "paper", active: true) }
-  let!(:account) { Accounts::Account.create!(runtime: runtime, name: "Test Account", currency: "INR") }
-  
+RSpec.describe "Phase 4: Margin Engine & RMS", type: :model do
+  let!(:account) { Account.create!(tenant_id: "t1", mode: "paper", name: "Test Paper Account") }
+
   before do
-    Broker::MarginAccount.create!(runtime: runtime, account: account, cash_balance: 100_000, available_margin: 100_000)
-    Broker::MarginRequirement.create!(segment: 'equity', product_type: 'MIS', cash_requirement_pct: 0.2)
-    Broker::MarginRequirement.create!(segment: 'equity', product_type: 'CNC', cash_requirement_pct: 1.0)
-  end
-
-  it "accepts order and blocks margin if funds are sufficient" do
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 100, price: 1000, order_type: "LIMIT", product_type: "CNC" }
-    )
-
-    expect(result[:success]).to be_truthy
-    
-    margin = Broker::MarginAccount.last
-    expect(margin.blocked_margin).to eq(100_000)
-    expect(margin.available_margin).to eq(0)
-    
-    expect(Events::DomainEvent.where(event_type: 'margin.blocked').count).to eq(1)
+    # Fund the account with 100,000 cash via ledger
+    JournalEntry.transaction do
+      j = JournalEntry.create!(account: account, reference_type: 'deposit', reference_id: 1, description: 'Initial Deposit')
+      j.ledger_entries.create!(account: account, ledger_account: 'cash', debit: 100_000)
+      j.ledger_entries.create!(account: account, ledger_account: 'equity', credit: 100_000)
+    end
   end
 
   it "rejects order if insufficient funds" do
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 200, price: 1000, order_type: "LIMIT", product_type: "CNC" }
-    )
+    # Trying to buy 150k worth of stock on CNC (100% margin) with only 100k
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'LIMIT', product_type: 'CNC', qty: 100, price: 1500
+    })
 
-    expect(result[:success]).to be_falsey
-    expect(result[:errors][:rms]).to include("INSUFFICIENT_FUNDS")
-    
-    margin = Broker::MarginAccount.last
-    expect(margin.blocked_margin).to eq(0)
-    expect(margin.available_margin).to eq(100_000)
-    
-    expect(Events::DomainEvent.where(event_type: 'order.rejected').count).to eq(1)
+    expect(order.status).to eq('REJECTED')
+    expect(order.order_status_transitions.last.reason).to include('INSUFFICIENT_FUNDS')
   end
 
-  it "calculates correct margin for MIS orders" do
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 200, price: 1000, order_type: "LIMIT", product_type: "MIS" }
-    )
+  it "accepts order if sufficient funds and blocks margin" do
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'LIMIT', product_type: 'CNC', qty: 10, price: 1500
+    })
 
-    expect(result[:success]).to be_truthy
-    
-    margin = Broker::MarginAccount.last
-    # 200 * 1000 = 200,000. 20% of 200,000 = 40,000
-    expect(margin.blocked_margin).to eq(40_000)
-    expect(margin.available_margin).to eq(60_000)
+    expect(order.status).to eq('OPEN')
+    ma = MarginAccount.find_by(account_id: account.id)
+    expect(ma.blocked_margin).to eq(15_000)
+    expect(ma.available_margin).to eq(85_000)
   end
 
-  it "releases margin when order is cancelled" do
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 50, price: 1000, order_type: "LIMIT", product_type: "CNC" }
-    )
+  it "releases margin on order cancellation" do
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'LIMIT', product_type: 'CNC', qty: 10, price: 1500
+    })
 
-    order = result[:order]
-    expect(Broker::MarginAccount.last.available_margin).to eq(50_000)
+    ma = MarginAccount.find_by(account_id: account.id)
+    expect(ma.blocked_margin).to eq(15_000)
 
-    cancel_result = OMS::CancelOrder.call(order)
-    expect(cancel_result[:success]).to be_truthy
+    CancelOrder.call(order: order)
 
-    expect(Broker::MarginAccount.last.available_margin).to eq(100_000)
-    expect(Broker::MarginAccount.last.blocked_margin).to eq(0)
-    expect(Events::DomainEvent.where(event_type: 'margin.released').count).to eq(1)
+    ma.reload
+    expect(ma.blocked_margin).to eq(0)
+    expect(ma.available_margin).to eq(100_000)
   end
 
-  it "releases only unused margin upon partial fill cancel" do
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 100, price: 1000, order_type: "LIMIT", product_type: "CNC" }
-    )
-    order = result[:order]
-    
-    order.update!(filled_quantity: 40, status: 'partially_filled')
-    
-    OMS::CancelOrder.call(order)
+  it "rejects short selling in CNC without holdings" do
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'sell', order_type: 'LIMIT', product_type: 'CNC', qty: 10, price: 1500
+    })
 
-    # Initially 100_000 blocked. Filled 40 (40_000). Remaining 60 should be released.
-    margin = Broker::MarginAccount.last
-    expect(margin.blocked_margin).to eq(40_000) # Remaining 40k blocked for the executed trade
-    expect(margin.available_margin).to eq(60_000)
+    expect(order.status).to eq('REJECTED')
+    expect(order.order_status_transitions.last.reason).to include('Short selling not allowed')
+  end
+  
+  it "requires only 20% margin for MIS" do
+    # 100 * 1500 = 150k. In MIS (20%), requires 30k. We have 100k, so it should succeed.
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'LIMIT', product_type: 'MIS', qty: 100, price: 1500
+    })
+
+    expect(order.status).to eq('OPEN')
+    ma = MarginAccount.find_by(account_id: account.id)
+    expect(ma.blocked_margin).to eq(30_000)
+    expect(ma.available_margin).to eq(70_000)
   end
 end

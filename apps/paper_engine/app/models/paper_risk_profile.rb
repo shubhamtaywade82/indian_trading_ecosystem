@@ -1,0 +1,2 @@
+class PaperRiskProfile < ApplicationRecord
+end

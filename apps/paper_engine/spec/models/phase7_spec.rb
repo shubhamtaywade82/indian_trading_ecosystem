@@ -1,52 +1,95 @@
 require 'rails_helper'
 
-RSpec.describe "Phase 7 Market Realism & Historical Replay", type: :model do
-  let!(:runtime) { Runtime.create!(name: "Test Replay", mode: "replay", active: true, slippage_model: 'FIXED_BPS', latency_model: 'FIXED') }
-  let!(:account) { Accounts::Account.create!(runtime: runtime, name: "Replay Account", currency: "INR") }
-  
+RSpec.describe "Phase 7: Market Realism (Slippage, Latency, Replay)", type: :model do
+  let!(:account) { Account.create!(tenant_id: "t1", mode: "paper", name: "Test Paper Account") }
+
   before do
-    Broker::MarginAccount.create!(runtime: runtime, account: account, cash_balance: 10_000_000, available_margin: 10_000_000)
-    Broker::MarginRequirement.create!(segment: 'equity', product_type: 'CNC', cash_requirement_pct: 1.0)
-    Exchange::OrderBook.clear_all
-  end
-
-  it "simulates an out-of-hours market rejection" do
-    # Replay session mock 09:00 AM (Pre-market)
-    session = Replay::HistoricalReplayEngine.start(runtime.id, Time.zone.parse("2026-06-20 09:00:00"), Time.zone.parse("2026-06-20 15:30:00"), 'TICK')
+    JournalEntry.transaction do
+      j = JournalEntry.create!(account: account, reference_type: 'deposit', reference_id: 1, description: 'Initial Deposit')
+      j.ledger_entries.create!(account: account, ledger_account: 'cash', debit: 1_000_000)
+      j.ledger_entries.create!(account: account, ledger_account: 'equity', credit: 1_000_000)
+    end
     
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "HDFCBANK", side: "BUY", quantity: 10, price: 1000, order_type: "MARKET", product_type: "CNC" }
+    MarginAccount.create!(
+      account_id: account.id,
+      cash_balance: 1_000_000,
+      blocked_margin: 0,
+      available_margin: 1_000_000,
+      mtm_pnl: 0,
+      realized_pnl: 0
     )
-
-    expect(result[:success]).to be_falsey
-    expect(result[:errors][:market]).to include('MARKET_CLOSED')
+    
+    ChargeProfile.create!(
+      broker: 'paper-generic', product_type: 'CNC',
+      stt_pct: 0.001, gst_pct: 0.18, exchange_pct: 0.0000325, sebi_pct: 0.000001, stamp_pct: 0.00015, brokerage_flat: 20.0
+    )
   end
 
-  it "simulates fixed slippage during active replay session" do
-    # Advance clock to 10:00 AM (Market Open)
-    session = Replay::HistoricalReplayEngine.start(runtime.id, Time.zone.parse("2026-06-20 09:00:00"), Time.zone.parse("2026-06-20 15:30:00"), 'TICK')
-    Replay::HistoricalReplayEngine.advance_tick(
-      session.id,
-      { symbol: "HDFCBANK", ltp: 1000, bid: 999, bid_qty: 1000, ask: 1000, ask_qty: 800 },
-      Time.zone.parse("2026-06-20 10:00:00")
-    )
-
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "HDFCBANK", side: "BUY", quantity: 10, price: 1000, order_type: "MARKET", product_type: "CNC" }
-    )
-
-    expect(result[:success]).to be_truthy
-    trade = Trades::Trade.last
-    expect(trade).to be_present
-
-    # Slippage applied (Fixed BPS 0.0005) -> 1000 * 0.0005 = 0.5. BUY gets higher fill price.
-    expect(trade.price).to eq(1000.5)
+  it "simulates slippage on MARKET orders" do
+    ENV['SIMULATE_SLIPPAGE'] = 'true'
+    begin
+      order = PlaceOrder.call(account: account, payload: {
+        instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100, price: 2500
+      })
+      
+      # 5 bps slippage on 2500 is 1.25, so buy price should be 2501.25
+      MatchingEngine.process_tick({ instrument_id: 'RELIANCE', ltp: 2500, volume: 100, time: Time.current })
+      
+      trade = PaperTrade.find_by(paper_order_id: order.id)
+      expect(trade).not_to be_nil
+      expect(trade.fill_price.to_f).to eq(2501.25)
+    ensure
+      ENV.delete('SIMULATE_SLIPPAGE')
+    end
   end
 
-  it "simulates latency via latency simulator" do
-    latency = Execution::LatencySimulator.simulate(runtime)
-    expect(latency).to eq(0.05) # 50ms fixed
+  it "does not apply slippage on LIMIT orders" do
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'INFY', side: 'buy', order_type: 'LIMIT', product_type: 'CNC', qty: 100, price: 1500
+    })
+    
+    MatchingEngine.process_tick({ instrument_id: 'INFY', ltp: 1500, volume: 100, time: Time.current })
+    
+    trade = PaperTrade.find_by(paper_order_id: order.id)
+    expect(trade).not_to be_nil
+    expect(trade.fill_price.to_f).to eq(1500.0)
+  end
+
+  it "runs historical replay correctly" do
+    # Schedule two ticks at different times
+    base_time = Time.parse("2026-06-20 09:15:00")
+    ticks = [
+      { instrument_id: 'HDFCBANK', ltp: 1600, volume: 500, time: base_time },
+      { instrument_id: 'HDFCBANK', ltp: 1590, volume: 200, time: base_time + 1.minute }
+    ]
+    
+    # Place a limit order at 1595
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'HDFCBANK', side: 'buy', order_type: 'LIMIT', product_type: 'CNC', qty: 100, price: 1595
+    })
+    
+    replay = Paper::Replay::HistoricalReplayEngine.new(ticks, speed_multiplier: 0) # run instantly
+    replay.run!
+    
+    trade = PaperTrade.find_by(paper_order_id: order.id)
+    expect(trade).not_to be_nil
+    expect(trade.fill_price.to_f).to eq(1590.0) # filled at the second tick
+  end
+
+  it "simulates latency when configured" do
+    ENV['SIMULATE_LATENCY'] = 'true'
+    
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'TCS', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 10, price: 3000
+    })
+    
+    start_time = Time.current
+    MatchingEngine.process_tick({ instrument_id: 'TCS', ltp: 3000, volume: 10, time: Time.current })
+    elapsed = Time.current - start_time
+    
+    expect(elapsed).to be > 0.02 # At least 20ms of latency due to base 50ms + jitter
+    
+    trade = PaperTrade.find_by(paper_order_id: order.id)
+    expect(trade).not_to be_nil
   end
 end

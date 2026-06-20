@@ -1,79 +1,77 @@
 require 'rails_helper'
 
-RSpec.describe "Phase 8 Broker Emulation Layer", type: :model do
-  let!(:runtime) { Runtime.create!(name: "Broker Test", mode: "paper", active: true) }
-  let!(:account) { Accounts::Account.create!(runtime: runtime, name: "Broker Account", currency: "INR") }
-  
-  let!(:kite_profile) do
-    BrokerProfiles::BrokerProfile.create!(
-      name: "Kite V3", broker_type: "KITE", version: "3.0",
-      rules: { "supported_products" => ["CNC", "MIS"], "freeze_qty" => 1800, "margin_multiplier_mis" => 5.0 }
-    )
-  end
+RSpec.describe "Phase 8: Broker Virtualization", type: :model do
+  let!(:account) { Account.create!(tenant_id: "t1", mode: "paper", name: "Dhan Paper Account") }
 
   before do
-    Broker::MarginAccount.create!(runtime: runtime, account: account, cash_balance: 1_000_000, available_margin: 1_000_000)
-    Broker::MarginRequirement.create!(segment: 'equity', product_type: 'CNC', cash_requirement_pct: 1.0)
-    Exchange::OrderBook.clear_all
-    allow(Market::SessionEngine).to receive(:evaluate).and_return({ success: true })
-  end
-
-  it "validates supported products via Product Emulator" do
-    runtime.update!(broker_profile: kite_profile)
+    JournalEntry.transaction do
+      j = JournalEntry.create!(account: account, reference_type: 'deposit', reference_id: 1, description: 'Initial Deposit')
+      j.ledger_entries.create!(account: account, ledger_account: 'cash', debit: 1_000_000)
+      j.ledger_entries.create!(account: account, ledger_account: 'equity', credit: 1_000_000)
+    end
     
-    result = Execution::ExecutionGateway.place_order(
-      runtime, account, 
-      { symbol: "RELIANCE", side: "BUY", quantity: 10, price: 1000, order_type: "LIMIT", product_type: "NRML" }
+    MarginAccount.create!(
+      account_id: account.id, cash_balance: 1_000_000, blocked_margin: 0, available_margin: 1_000_000, mtm_pnl: 0, realized_pnl: 0
     )
     
-    expect(result[:success]).to be_falsey
-    expect(result[:errors][:broker]).to include("PRODUCT_NOT_SUPPORTED_BY_BROKER")
-  end
-
-  it "splits orders based on freeze quantity rules" do
-    runtime.update!(broker_profile: kite_profile)
-    
-    result = Execution::ExecutionGateway.place_order(
-      runtime, account, 
-      { symbol: "NIFTY", side: "BUY", quantity: 5000, price: 100, order_type: "MARKET", product_type: "MIS" }
+    BrokerProfile.create!(
+      broker_name: 'dhan',
+      supports_amo: true,
+      max_order_qty: 5000,
+      block_penny_stocks: true,
+      restrict_illiquid_options: true,
+      error_format: 'dhan'
     )
     
-    expect(result[:success]).to be_truthy
-    
-    # 5000 split by 1800: 1800, 1800, 1400. Total 3 orders created.
-    expect(Orders::Order.count).to eq(3)
-    quantities = Orders::Order.pluck(:quantity).sort
-    expect(quantities).to eq([1400, 1800, 1800])
-    
-    expect(Events::DomainEvent.where(event_type: 'order.freeze_split').count).to eq(1)
+    BrokerProfile.create!(
+      broker_name: 'kite',
+      supports_amo: true,
+      max_order_qty: 10000,
+      block_penny_stocks: false,
+      restrict_illiquid_options: true,
+      error_format: 'kite'
+    )
   end
 
-  it "emulates broker-specific MIS margin multipliers" do
-    runtime.update!(broker_profile: kite_profile)
+  it "enforces broker specific max order quantity" do
+    ENV['BROKER_PROFILE'] = 'dhan'
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 6000, price: 2500
+    })
     
-    # Base margin for 10 qty at 1000 is 10000. For MIS, base calculator says 0.2 -> 2000.
-    # Kite profile mis multiplier = 5.0, so final margin = 2000 / 5.0 = 400.
-    
-    result = Execution::ExecutionGateway.place_order(
-      runtime, account, 
-      { symbol: "RELIANCE", side: "BUY", quantity: 10, price: 1000, order_type: "LIMIT", product_type: "MIS" }
-    )
-    
-    expect(result[:success]).to be_truthy
-    margin_account = Broker::MarginAccount.last
-    expect(margin_account.blocked_margin).to eq(400)
+    expect(order.status).to eq('REJECTED')
+    expect(order.order_status_transitions.last.reason).to include('RS-MAX_QTY_EXCEEDED')
+    expect(order.order_status_transitions.last.reason).to include('Maximum order quantity is 5000')
   end
 
-  it "routes live orders to ApiAdapters instead of OMS" do
-    runtime.update!(broker_profile: kite_profile, mode: 'live')
+  it "enforces broker specific instrument rules with broker specific error formatting" do
+    ENV['BROKER_PROFILE'] = 'dhan'
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'SUZLON_PENNY', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100, price: 50
+    })
     
-    result = Execution::ExecutionGateway.place_order(
-      runtime, account, 
-      { symbol: "RELIANCE", side: "BUY", quantity: 10, price: 1000, order_type: "LIMIT", product_type: "CNC" }
-    )
+    expect(order.status).to eq('REJECTED')
+    expect(order.order_status_transitions.last.reason).to include('RS-INSTRUMENT_RESTRICTED')
+    expect(order.order_status_transitions.last.reason).to include('Penny stocks are blocked')
+  end
+
+  it "allows Kite mode to bypass penny stock block with Kite formatting" do
+    ENV['BROKER_PROFILE'] = 'kite'
     
-    expect(result[:success]).to be_truthy
-    expect(result[:broker_order_id]).to match(/^KITE_/)
-    expect(Orders::Order.count).to eq(0) # Did not go through Paper OMS
+    # Passes broker rule, might fail RMS if no cash but here it has 1M cash, 100*50 = 5k. Will pass!
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'SUZLON_PENNY', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100, price: 50
+    })
+    
+    expect(order.status).to eq('OPEN')
+    
+    # However illiquid options are blocked in Kite
+    order_illiquid = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'NIFTY_FAR_OTM', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 50, price: 10
+    })
+    
+    expect(order_illiquid.status).to eq('REJECTED')
+    expect(order_illiquid.order_status_transitions.last.reason).to include('InputException')
+    expect(order_illiquid.order_status_transitions.last.reason).to include('Trading in illiquid options is restricted')
   end
 end

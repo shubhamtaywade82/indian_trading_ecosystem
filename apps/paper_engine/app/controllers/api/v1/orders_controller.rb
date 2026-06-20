@@ -1,75 +1,60 @@
 module Api
   module V1
     class OrdersController < ApplicationController
-      include Idempotent
-
+      # POST /api/v1/orders
       def create
-        with_idempotency do
-          result = OMS::CreateOrder.call(
-            runtime: current_runtime,
-            account: current_account,
-            params: order_params
-          )
-
-          if result[:success]
-            @order_id_for_idempotency = result[:order].id
-            render json: { order_id: result[:order].external_order_id, status: result[:order].status.upcase }, status: :created
-          else
-            render json: { errors: result[:errors] }, status: :unprocessable_entity
-          end
-        end
+        order = PlaceOrder.call(account: current_account, payload: order_params.to_h.symbolize_keys)
+        render json: serialize_order(order), status: order.status == 'REJECTED' ? :unprocessable_entity : :created
       end
 
-      def update
-        order = current_runtime.orders.find_by!(external_order_id: params[:id])
-        result = OMS::ModifyOrder.call(order, params: update_params)
-
-        if result[:success]
-          render json: { order_id: result[:order].external_order_id, status: result[:order].status.upcase }, status: :ok
-        else
-          render json: { errors: result[:errors] }, status: :unprocessable_entity
-        end
-      end
-
-      def destroy
-        order = current_runtime.orders.find_by!(external_order_id: params[:id])
-        result = OMS::CancelOrder.call(order)
-
-        if result[:success]
-          render json: { order_id: result[:order].external_order_id, status: result[:order].status.upcase }, status: :ok
-        else
-          # Return 409 Conflict if cancelling twice or not allowed
-          render json: { errors: result[:errors] }, status: :conflict
-        end
-      end
-
-      def show
-        order = current_runtime.orders.find_by!(external_order_id: params[:id])
-        render json: { order_id: order.external_order_id, status: order.status.upcase, quantity: order.quantity, price: order.price }
-      end
-
+      # GET /api/v1/orders
       def index
-        orders = current_runtime.orders
-        render json: orders.map { |o| { order_id: o.external_order_id, status: o.status.upcase } }
+        orders = PaperOrder.where(account: current_account).order(created_at: :desc).limit(100)
+        render json: orders.map { |o| serialize_order(o) }
+      end
+
+      # GET /api/v1/orders/:id
+      def show
+        order = PaperOrder.find_by!(id: params[:id], account: current_account)
+        render json: serialize_order(order)
+      end
+
+      # DELETE /api/v1/orders/:id (cancel)
+      def destroy
+        order = PaperOrder.find_by!(id: params[:id], account: current_account)
+
+        if order.cancellable?
+          order.cancel!
+          order.log_transition(order.status, 'CANCELLED', 'Cancelled by user')
+          render json: serialize_order(order)
+        else
+          render json: { error: 'Order cannot be cancelled in its current state' }, status: :conflict
+        end
       end
 
       private
 
       def order_params
-        params.require(:order).permit(:symbol, :side, :quantity, :order_type, :price, :trigger_price, :product_type)
+        params.require(:order).permit(
+          :instrument_id, :side, :order_type, :product_type, :qty, :price,
+          :trigger_price, :tif, :strategy_id, :client_order_id
+        )
       end
 
-      def update_params
-        params.require(:order).permit(:quantity, :price)
-      end
-
-      # Mocking current_runtime and current_account for now
-      def current_runtime
-        Runtime.first || Runtime.create!(name: "Test", mode: "paper", active: true)
-      end
-
-      def current_account
-        Accounts::Account.first || Accounts::Account.create!(runtime: current_runtime, name: "Test Account", currency: "INR")
+      def serialize_order(order)
+        {
+          id: order.id,
+          instrument_id: order.instrument_id,
+          side: order.side,
+          order_type: order.order_type,
+          product_type: order.product_type,
+          qty: order.qty,
+          price: order.price,
+          status: order.status,
+          strategy_id: order.strategy_id,
+          client_order_id: order.client_order_id,
+          created_at: order.created_at
+        }
       end
     end
   end

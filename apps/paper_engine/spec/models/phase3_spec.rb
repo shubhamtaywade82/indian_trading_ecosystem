@@ -1,100 +1,84 @@
 require 'rails_helper'
 
-RSpec.describe "Phase 3 Matching Engine", type: :model do
-  let!(:runtime) { Runtime.create!(name: "Test", mode: "paper", active: true) }
-  let!(:account) { Accounts::Account.create!(runtime: runtime, name: "Test Account", currency: "INR") }
+RSpec.describe "Phase 3: Matching Engine", type: :model do
+  let!(:account) { Account.create!(tenant_id: "t1", mode: "paper", name: "Test Paper Account") }
 
   before do
-    Exchange::OrderBook.clear_all
+    ENV.delete('BROKER_PROFILE')
+    MarginAccount.find_or_create_by!(account_id: account.id) do |ma|
+      ma.cash_balance      = 10_000_000
+      ma.blocked_margin    = 0
+      ma.available_margin  = 10_000_000
+      ma.mtm_pnl           = 0
+      ma.realized_pnl      = 0
+    end
   end
 
-  it "matches market orders filling against asks and creates trades" do
-    # Tick arrives
-    Exchange::TickProcessor.process(
-      runtime_id: runtime.id,
-      symbol: "RELIANCE",
-      tick: { ltp: 2500, bid: 2499, bid_qty: 1000, ask: 2501, ask_qty: 800 }
-    )
+  it "matches Market orders immediately" do
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100
+    })
 
-    # Place order
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 150, order_type: "MARKET" }
-    )
-    expect(result[:success]).to be_truthy
-    order = result[:order]
-    
+    MatchingEngine.process_tick({ instrument_id: 'RELIANCE', ltp: 2500, volume: 500 })
+
     order.reload
-    expect(order.status).to eq('filled')
-    expect(order.filled_quantity).to eq(150)
-    expect(order.average_price).to eq(2501)
-    
-    expect(Trades::Trade.count).to eq(1)
-    expect(Trades::Trade.last.quantity).to eq(150)
-    expect(Trades::Trade.last.price).to eq(2501)
+    expect(order.status).to eq('FILLED')
+    expect(order.filled_qty).to eq(100)
+    expect(order.paper_trades.first.fill_price).to eq(2500)
   end
 
-  it "partially fills limit orders and queues the remainder" do
-    Exchange::TickProcessor.process(
-      runtime_id: runtime.id,
-      symbol: "RELIANCE",
-      tick: { ltp: 2500, bid: 2499, bid_qty: 100, ask: 2500, ask_qty: 50 }
-    )
+  it "matches Limit Buy orders when LTP <= Limit Price" do
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'HDFC', side: 'buy', order_type: 'LIMIT', product_type: 'CNC', qty: 50, price: 1500
+    })
 
-    result = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 100, order_type: "LIMIT", price: 2500 }
-    )
-    order = result[:order]
-    order.reload
+    # Tick above limit, should not fill
+    MatchingEngine.process_tick({ instrument_id: 'HDFC', ltp: 1510, volume: 500 })
+    expect(order.reload.status).to eq('OPEN')
 
-    expect(order.status).to eq('partially_filled')
-    expect(order.filled_quantity).to eq(50)
-    
-    queue_entry = Execution::QueueEntry.last
-    expect(queue_entry.order_id).to eq(order.id)
-    expect(queue_entry.remaining_quantity).to eq(50)
-
-    # Next tick arrives that can fill the rest
-    Exchange::TickProcessor.process(
-      runtime_id: runtime.id,
-      symbol: "RELIANCE",
-      tick: { ltp: 2500, bid: 2499, bid_qty: 100, ask: 2500, ask_qty: 100 }
-    )
-
-    order.reload
-    expect(order.status).to eq('filled')
-    expect(order.filled_quantity).to eq(100)
-    expect(Execution::QueueEntry.count).to eq(0)
+    # Tick at limit, should fill
+    MatchingEngine.process_tick({ instrument_id: 'HDFC', ltp: 1500, volume: 500 })
+    expect(order.reload.status).to eq('FILLED')
   end
 
-  it "enforces time priority for limit orders" do
-    result1 = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 100, order_type: "LIMIT", price: 2500 }
-    )
-    result2 = OMS::CreateOrder.call(
-      runtime: runtime, account: account,
-      params: { symbol: "RELIANCE", side: "BUY", quantity: 100, order_type: "LIMIT", price: 2500 }
-    )
+  it "handles partial fills based on tick volume" do
+    # Seed holdings so the sell side passes RMS
+    TradeProcessor.execute(account: account, instrument: 'INFY', side: 'buy', qty: 200, price: 1400)
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'INFY', side: 'sell', order_type: 'LIMIT', product_type: 'CNC', qty: 200, price: 1400
+    })
 
-    expect(Execution::QueueEntry.count).to eq(2)
-    q1 = Execution::QueueEntry.first
-    q2 = Execution::QueueEntry.last
-    expect(q1.queue_position).to be < q2.queue_position
+    # Partial tick
+    MatchingEngine.process_tick({ instrument_id: 'INFY', ltp: 1405, volume: 150 })
+    
+    order.reload
+    expect(order.status).to eq('PARTIALLY_FILLED')
+    expect(order.filled_qty).to eq(150)
+    expect(order.remaining_qty).to eq(50)
 
-    # Tick provides 150 ask_qty at 2500
-    Exchange::TickProcessor.process(
-      runtime_id: runtime.id,
-      symbol: "RELIANCE",
-      tick: { ltp: 2500, bid: 2499, bid_qty: 100, ask: 2500, ask_qty: 150 }
-    )
+    # Remaining tick
+    MatchingEngine.process_tick({ instrument_id: 'INFY', ltp: 1410, volume: 100 })
+    
+    order.reload
+    expect(order.status).to eq('FILLED')
+    expect(order.filled_qty).to eq(200)
+  end
 
-    o1 = result1[:order].reload
-    o2 = result2[:order].reload
+  it "triggers SL orders when trigger price is hit" do
+    # Seed holdings so the sell-side SL-M passes RMS
+    TradeProcessor.execute(account: account, instrument: 'TCS', side: 'buy', qty: 100, price: 3100)
+    order = PlaceOrder.call(account: account, payload: {
+      instrument_id: 'TCS', side: 'sell', order_type: 'SL-M', product_type: 'CNC', qty: 100, trigger_price: 3000
+    })
 
-    expect(o1.status).to eq('filled')
-    expect(o2.status).to eq('partially_filled')
-    expect(o2.filled_quantity).to eq(50)
+    # Sell SL is triggered when LTP drops to or below trigger price
+    MatchingEngine.process_tick({ instrument_id: 'TCS', ltp: 3010, volume: 500 })
+    expect(order.reload.status).to eq('OPEN')
+    expect(order.order_type).to eq('SL-M')
+
+    MatchingEngine.process_tick({ instrument_id: 'TCS', ltp: 2995, volume: 500 })
+    order.reload
+    expect(order.status).to eq('FILLED')
+    expect(order.order_status_transitions.pluck(:reason)).to include(a_string_matching(/Stop Loss triggered/))
   end
 end

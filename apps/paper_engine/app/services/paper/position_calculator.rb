@@ -9,9 +9,9 @@ module Paper
 
       total_bought = buy_lots.sum(:original_qty)
       total_sold = sell_lots.sum(:original_qty)
-      net_qty = total_bought - total_sold
+      net_qty = buy_lots.sum(:remaining_qty)
 
-      open_lots = buy_lots.where(status: "open")
+      open_lots = buy_lots.where(status: "OPEN")
       total_remaining = open_lots.sum(:remaining_qty)
       total_cost = open_lots.sum("remaining_qty * entry_price")
 
@@ -41,7 +41,8 @@ module Paper
     def self.cash_balance(account)
       debits = LedgerEntry.where(account: account, ledger_account: "cash").sum(:debit)
       credits = LedgerEntry.where(account: account, ledger_account: "cash").sum(:credit)
-      account.starting_balance + debits - credits
+      # Debits = cash IN (sells/deposits), Credits = cash OUT (buys)
+      debits - credits
     end
   end
 end

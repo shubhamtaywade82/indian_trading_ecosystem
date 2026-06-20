@@ -1,0 +1,2 @@
+class ChargeProfile < ApplicationRecord
+end

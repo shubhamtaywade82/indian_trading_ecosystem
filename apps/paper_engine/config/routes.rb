@@ -1,38 +1,47 @@
 Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
-      resources :orders, only: [:create, :update, :destroy, :show, :index]
-      get 'trades', to: 'runtime_data#trades'
-      get 'positions', to: 'runtime_data#positions'
-      get 'holdings', to: 'runtime_data#holdings'
-      get 'funds', to: 'runtime_data#funds'
-      get 'depth/:symbol', to: 'runtime_data#depth'
-      get 'orderbook/:symbol', to: 'runtime_data#orderbook'
-      get 'executions', to: 'runtime_data#executions'
+      # Orders
+      resources :orders, only: [:index, :show, :create, :update, :destroy] do
+        member do
+          delete :cancel
+        end
+      end
 
-      get 'margin', to: 'margin#index'
+      # Positions, Holdings, Trades, Funds
+      get 'positions',  to: 'runtime_data#positions'
+      get 'holdings',   to: 'runtime_data#holdings'
+      get 'trades',     to: 'runtime_data#trades'
+      get 'funds',      to: 'runtime_data#funds'
+      get 'depth/:symbol', to: 'runtime_data#depth'
+
+      # Margin
+      get  'margin',           to: 'margin#index'
       post 'margin/calculate', to: 'margin#calculate'
 
-      get 'risk/portfolio', to: 'risk#portfolio'
-      get 'risk/strategies', to: 'risk#strategies'
-      get 'risk/snapshot', to: 'risk#snapshot'
-      post 'risk/kill-switch', to: 'risk#kill_switch'
+      # Risk
+      get  'risk/portfolio',  to: 'risk#portfolio'
+      get  'risk/strategies', to: 'risk#strategies'
+      get  'risk/snapshot',   to: 'risk#snapshot'
+      post 'risk/kill_switch', to: 'risk#kill_switch'
 
-      get 'charges', to: 'accounting#charges'
-      get 'settlements', to: 'accounting#settlements'
-      get 'corporate-actions', to: 'accounting#corporate_actions'
-      get 'dividends', to: 'accounting#dividends'
-      get 'tax-summary', to: 'accounting#tax_summary'
-      get 'cashflows', to: 'accounting#cashflows'
+      # Accounting
+      get 'accounting/charges',          to: 'accounting#charges'
+      get 'accounting/settlements',      to: 'accounting#settlements'
+      get 'accounting/corporate_actions', to: 'accounting#corporate_actions'
+      get 'accounting/dividends',        to: 'accounting#dividends'
+      get 'accounting/tax_summary',      to: 'accounting#tax_summary'
+      get 'accounting/cashflows',        to: 'accounting#cashflows'
 
+      # Broker Profiles
+      resources :broker_profiles, only: [:index, :show, :create, :update]
+
+      # Replay
       post 'replay/start', to: 'replay#start'
-      post 'replay/pause', to: 'replay#pause'
-      post 'replay/resume', to: 'replay#resume'
-      get 'replay/status', to: 'replay#status'
-
-      get 'broker-profiles', to: 'broker_profiles#index'
-      post 'broker-profiles/:id/activate', to: 'broker_profiles#activate'
-      get 'broker-profiles/:id/capabilities', to: 'broker_profiles#capabilities'
+      post 'replay/stop',  to: 'replay#stop'
+      get  'replay/status', to: 'replay#status'
     end
   end
+
+  get 'up', to: 'rails/health#show', as: :rails_health_check
 end

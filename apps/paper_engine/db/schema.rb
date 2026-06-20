@@ -10,411 +10,240 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_072405) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_084921) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "currency"
-    t.string "name"
-    t.bigint "runtime_id"
+    t.string "currency", default: "INR"
+    t.string "mode", null: false
+    t.string "name", null: false
+    t.string "run_id"
+    t.string "tenant_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_accounts_on_runtime_id"
+    t.index ["tenant_id", "mode", "run_id"], name: "index_accounts_on_tenant_id_and_mode_and_run_id", unique: true
   end
 
   create_table "broker_profiles", force: :cascade do |t|
-    t.boolean "active", default: true
-    t.string "broker_type", null: false
+    t.boolean "block_penny_stocks"
+    t.string "broker_name"
     t.datetime "created_at", null: false
-    t.string "name", null: false
-    t.jsonb "rules", default: {}
+    t.string "error_format"
+    t.integer "max_order_qty"
+    t.boolean "restrict_illiquid_options"
+    t.boolean "supports_amo"
     t.datetime "updated_at", null: false
-    t.string "version", null: false
   end
 
   create_table "charge_profiles", force: :cascade do |t|
-    t.string "broker", null: false
-    t.decimal "brokerage_flat", default: "0.0"
-    t.decimal "brokerage_pct", default: "0.0"
+    t.string "broker"
+    t.decimal "brokerage_flat"
+    t.decimal "brokerage_pct"
     t.datetime "created_at", null: false
-    t.decimal "exchange_pct", default: "0.0"
-    t.decimal "gst_pct", default: "0.0"
-    t.string "product_type", null: false
-    t.decimal "sebi_pct", default: "0.0"
-    t.string "segment", null: false
-    t.decimal "stamp_pct", default: "0.0"
-    t.decimal "stt_pct", default: "0.0"
+    t.decimal "exchange_pct"
+    t.decimal "gst_pct"
+    t.string "product_type"
+    t.decimal "sebi_pct"
+    t.string "segment"
+    t.decimal "stamp_pct"
+    t.decimal "stt_pct"
     t.datetime "updated_at", null: false
   end
 
-  create_table "corporate_actions", force: :cascade do |t|
+  create_table "corporate_action_events", force: :cascade do |t|
     t.string "action_type", null: false
     t.datetime "created_at", null: false
-    t.jsonb "details", default: {}
     t.date "ex_date", null: false
-    t.date "record_date"
-    t.bigint "runtime_id", null: false
-    t.string "status", default: "PENDING"
-    t.string "symbol", null: false
+    t.string "instrument_id", null: false
+    t.decimal "ratio_or_amount", null: false
     t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_corporate_actions_on_runtime_id"
   end
 
-  create_table "domain_events", force: :cascade do |t|
+  create_table "journal_entries", force: :cascade do |t|
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
-    t.string "event_type"
-    t.datetime "occurred_at"
-    t.jsonb "payload"
-    t.bigint "runtime_id"
+    t.string "description"
+    t.bigint "reference_id", null: false
+    t.string "reference_type", null: false
     t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_domain_events_on_runtime_id"
-  end
-
-  create_table "idempotency_keys", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.string "key"
-    t.bigint "resource_id"
-    t.string "resource_type"
-    t.bigint "runtime_id"
-    t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_idempotency_keys_on_runtime_id"
-  end
-
-  create_table "investment_mandates", force: :cascade do |t|
-    t.jsonb "allowed_segments", default: []
-    t.decimal "capital_allocation"
-    t.datetime "created_at", null: false
-    t.string "horizon"
-    t.decimal "max_drawdown"
-    t.string "name", null: false
-    t.string "rebalance_frequency"
-    t.decimal "risk_budget"
-    t.bigint "strategy_id", null: false
-    t.decimal "target_return"
-    t.datetime "updated_at", null: false
-    t.index ["strategy_id"], name: "index_investment_mandates_on_strategy_id"
+    t.index ["account_id"], name: "index_journal_entries_on_account_id"
   end
 
   create_table "ledger_entries", force: :cascade do |t|
-    t.string "account_code"
-    t.bigint "account_id"
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
     t.decimal "credit", default: "0.0"
     t.decimal "debit", default: "0.0"
-    t.string "entry_type"
-    t.bigint "reference_id"
-    t.string "reference_type"
-    t.bigint "runtime_id"
+    t.bigint "journal_entry_id", null: false
+    t.string "ledger_account", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_ledger_entries_on_account_id"
-    t.index ["runtime_id"], name: "index_ledger_entries_on_runtime_id"
+    t.index ["journal_entry_id"], name: "index_ledger_entries_on_journal_entry_id"
+  end
+
+  create_table "lot_consumptions", force: :cascade do |t|
+    t.bigint "closing_trade_id", null: false
+    t.string "costing_method", null: false
+    t.datetime "created_at", null: false
+    t.decimal "exit_price", null: false
+    t.decimal "qty_consumed", null: false
+    t.decimal "realized_pnl", null: false
+    t.bigint "trade_lot_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["closing_trade_id"], name: "index_lot_consumptions_on_closing_trade_id"
+    t.index ["trade_lot_id"], name: "index_lot_consumptions_on_trade_lot_id"
+  end
+
+  create_table "margin_accounts", force: :cascade do |t|
+    t.string "account_id"
+    t.decimal "available_margin"
+    t.decimal "blocked_margin"
+    t.decimal "cash_balance"
+    t.datetime "created_at", null: false
+    t.decimal "mtm_pnl"
+    t.decimal "realized_pnl"
+    t.datetime "updated_at", null: false
+    t.decimal "utilized_margin"
+  end
+
+  create_table "margin_events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.decimal "amount", null: false
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.string "reference_id"
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_margin_events_on_account_id"
   end
 
   create_table "margin_requirements", force: :cascade do |t|
-    t.decimal "cash_requirement_pct", default: "1.0"
+    t.decimal "cash_requirement_pct"
     t.datetime "created_at", null: false
-    t.decimal "exposure_margin_pct", default: "0.0"
-    t.string "product_type", null: false
-    t.string "segment", null: false
-    t.decimal "span_margin_pct", default: "0.0"
+    t.decimal "exposure_margin_pct"
+    t.string "product_type"
+    t.string "segment"
+    t.decimal "span_margin_pct"
     t.string "symbol"
     t.datetime "updated_at", null: false
-    t.index ["segment", "product_type", "symbol"], name: "idx_margin_req_lookup", unique: true
   end
 
-  create_table "orders", force: :cascade do |t|
-    t.bigint "account_id"
-    t.decimal "average_price"
-    t.string "correlation_id"
+  create_table "order_status_transitions", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "exchange"
-    t.datetime "expires_at"
-    t.uuid "external_order_id"
-    t.integer "filled_quantity", default: 0
-    t.string "order_type"
+    t.string "from_status"
+    t.datetime "occurred_at", null: false
+    t.bigint "paper_order_id", null: false
+    t.string "reason"
+    t.string "to_status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["paper_order_id"], name: "index_order_status_transitions_on_paper_order_id"
+  end
+
+  create_table "paper_configs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.string "scope", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "value", null: false
+    t.index ["scope", "key"], name: "index_paper_configs_on_scope_and_key", unique: true
+  end
+
+  create_table "paper_orders", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "client_order_id", null: false
+    t.datetime "created_at", null: false
+    t.string "instrument_id", null: false
+    t.string "order_type", null: false
     t.decimal "price"
-    t.string "product_type"
-    t.integer "quantity"
-    t.bigint "runtime_id"
-    t.string "segment"
-    t.string "side"
-    t.string "status"
-    t.bigint "strategy_id"
-    t.string "symbol"
+    t.string "product_type", null: false
+    t.decimal "qty", null: false
+    t.string "side", null: false
+    t.string "status", default: "PENDING", null: false
+    t.string "strategy_id"
+    t.string "tif", default: "DAY"
     t.decimal "trigger_price"
     t.datetime "updated_at", null: false
-    t.string "validity"
-    t.index ["account_id"], name: "index_orders_on_account_id"
-    t.index ["runtime_id"], name: "index_orders_on_runtime_id"
+    t.index ["account_id", "status"], name: "index_paper_orders_on_account_id_and_status"
+    t.index ["account_id"], name: "index_paper_orders_on_account_id"
+    t.index ["client_order_id"], name: "index_paper_orders_on_client_order_id", unique: true
   end
 
-  create_table "paper_execution_queues", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.bigint "order_id", null: false
-    t.decimal "price", null: false
-    t.bigint "queue_position", null: false
-    t.integer "remaining_quantity", null: false
-    t.bigint "runtime_id", null: false
-    t.string "side", null: false
-    t.string "symbol", null: false
-    t.datetime "updated_at", null: false
-    t.index ["order_id"], name: "index_paper_execution_queues_on_order_id"
-    t.index ["runtime_id", "symbol", "side", "price", "queue_position"], name: "idx_execution_queue_priority"
-    t.index ["runtime_id"], name: "index_paper_execution_queues_on_runtime_id"
-  end
-
-  create_table "paper_funds", force: :cascade do |t|
-    t.bigint "account_id"
-    t.decimal "available_balance", default: "0.0"
-    t.decimal "blocked_balance", default: "0.0"
-    t.decimal "cash_balance", default: "0.0"
-    t.datetime "created_at", null: false
-    t.bigint "runtime_id"
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_paper_funds_on_account_id"
-    t.index ["runtime_id"], name: "index_paper_funds_on_runtime_id"
-  end
-
-  create_table "paper_holdings", force: :cascade do |t|
-    t.bigint "account_id"
-    t.decimal "average_price", default: "0.0"
-    t.datetime "created_at", null: false
-    t.integer "quantity", default: 0
-    t.bigint "runtime_id"
-    t.string "symbol"
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_paper_holdings_on_account_id"
-    t.index ["runtime_id"], name: "index_paper_holdings_on_runtime_id"
-  end
-
-  create_table "paper_margin_accounts", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.decimal "available_margin", default: "0.0"
-    t.decimal "blocked_margin", default: "0.0"
-    t.decimal "cash_balance", default: "0.0"
-    t.datetime "created_at", null: false
-    t.decimal "mtm_pnl", default: "0.0"
-    t.decimal "realized_pnl", default: "0.0"
-    t.bigint "runtime_id", null: false
-    t.datetime "updated_at", null: false
-    t.decimal "utilized_margin", default: "0.0"
-    t.index ["account_id"], name: "index_paper_margin_accounts_on_account_id"
-    t.index ["runtime_id"], name: "index_paper_margin_accounts_on_runtime_id"
-  end
-
-  create_table "paper_positions", force: :cascade do |t|
-    t.bigint "account_id"
-    t.decimal "average_price", default: "0.0"
-    t.datetime "created_at", null: false
-    t.integer "quantity", default: 0
-    t.decimal "realized_pnl", default: "0.0"
-    t.bigint "runtime_id"
-    t.string "symbol"
-    t.decimal "unrealized_pnl", default: "0.0"
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_paper_positions_on_account_id"
-    t.index ["runtime_id"], name: "index_paper_positions_on_runtime_id"
-  end
-
-  create_table "paper_risk_snapshots", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.decimal "daily_pnl", default: "0.0"
-    t.decimal "drawdown_pct", default: "0.0"
-    t.decimal "equity", default: "0.0"
-    t.integer "open_positions", default: 0
-    t.decimal "peak_equity", default: "0.0"
-    t.decimal "portfolio_value", default: "0.0"
-    t.bigint "runtime_id", null: false
-    t.jsonb "sector_exposure", default: {}
-    t.date "snapshot_date"
-    t.bigint "strategy_id"
-    t.jsonb "symbol_exposure", default: {}
-    t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_paper_risk_snapshots_on_runtime_id"
-    t.index ["strategy_id"], name: "index_paper_risk_snapshots_on_strategy_id"
-  end
-
-  create_table "portfolio_allocations", force: :cascade do |t|
-    t.jsonb "actual_weights", default: {}
-    t.decimal "cash_allocation"
-    t.datetime "created_at", null: false
-    t.string "name", null: false
-    t.bigint "runtime_id", null: false
-    t.jsonb "target_weights", default: {}
-    t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_portfolio_allocations_on_runtime_id"
-  end
-
-  create_table "portfolio_cashflows", force: :cascade do |t|
-    t.bigint "account_id", null: false
-    t.decimal "amount", null: false
-    t.string "cashflow_type", null: false
-    t.datetime "created_at", null: false
-    t.string "reference_id"
-    t.string "reference_type"
-    t.bigint "runtime_id", null: false
-    t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_portfolio_cashflows_on_account_id"
-    t.index ["runtime_id"], name: "index_portfolio_cashflows_on_runtime_id"
-  end
-
-  create_table "replay_sessions", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "current_time"
-    t.datetime "end_time"
-    t.string "latency_model", default: "NONE"
-    t.string "mode", default: "TICK"
-    t.bigint "runtime_id", null: false
-    t.string "slippage_model", default: "DEPTH_BASED"
-    t.string "spread_model", default: "HISTORICAL"
-    t.datetime "start_time"
-    t.string "status", default: "PENDING"
-    t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_replay_sessions_on_runtime_id"
-  end
-
-  create_table "risk_profiles", force: :cascade do |t|
+  create_table "paper_risk_profiles", force: :cascade do |t|
+    t.string "account_id"
     t.datetime "created_at", null: false
     t.decimal "max_daily_loss"
     t.decimal "max_drawdown_pct"
     t.integer "max_open_positions"
     t.decimal "max_position_size"
-    t.decimal "max_sector_exposure_pct"
     t.decimal "max_symbol_exposure_pct"
-    t.bigint "runtime_id", null: false
-    t.bigint "strategy_id"
+    t.string "status"
+    t.string "strategy_id"
     t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_risk_profiles_on_runtime_id"
-    t.index ["strategy_id"], name: "index_risk_profiles_on_strategy_id"
   end
 
-  create_table "runtime_configs", force: :cascade do |t|
-    t.string "brokerage_plan"
+  create_table "paper_trades", force: :cascade do |t|
+    t.bigint "account_id", null: false
     t.datetime "created_at", null: false
-    t.string "latency_model"
-    t.integer "rng_seed"
-    t.bigint "runtime_id"
-    t.jsonb "settings"
-    t.string "slippage_model"
+    t.datetime "exchange_ts", null: false
+    t.decimal "fill_price", null: false
+    t.decimal "fill_qty", null: false
+    t.decimal "fill_value", null: false
+    t.string "instrument_id", null: false
+    t.bigint "paper_order_id", null: false
+    t.integer "sequence_no"
+    t.string "side", null: false
+    t.decimal "slippage_applied", default: "0.0"
     t.datetime "updated_at", null: false
-    t.index ["runtime_id"], name: "index_runtime_configs_on_runtime_id"
+    t.index ["account_id"], name: "index_paper_trades_on_account_id"
+    t.index ["paper_order_id"], name: "index_paper_trades_on_paper_order_id"
   end
 
-  create_table "runtimes", force: :cascade do |t|
-    t.boolean "active"
-    t.bigint "broker_profile_id"
+  create_table "portfolio_cashflows", force: :cascade do |t|
+    t.bigint "account_id"
+    t.decimal "amount"
     t.datetime "created_at", null: false
-    t.string "latency_model", default: "NONE"
-    t.string "mode"
-    t.string "name"
-    t.string "replay_mode", default: "TICK"
-    t.string "slippage_model", default: "DEPTH_BASED"
-    t.string "spread_model", default: "HISTORICAL"
+    t.string "flow_type"
+    t.string "reference_id"
+    t.string "reference_type"
     t.datetime "updated_at", null: false
-    t.uuid "uuid"
-    t.index ["broker_profile_id"], name: "index_runtimes_on_broker_profile_id"
   end
 
   create_table "settlement_lots", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "quantity"
+    t.date "settlement_date"
+    t.string "status"
+    t.string "symbol"
+    t.bigint "trade_id"
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "trade_lots", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.datetime "created_at", null: false
-    t.integer "quantity", null: false
-    t.bigint "runtime_id", null: false
-    t.date "settlement_date", null: false
-    t.string "status", default: "PENDING"
-    t.string "symbol", null: false
-    t.bigint "trade_id", null: false
+    t.decimal "entry_price", null: false
+    t.string "instrument_id", null: false
+    t.bigint "opening_trade_id", null: false
+    t.decimal "original_qty", null: false
+    t.decimal "remaining_qty", null: false
+    t.string "side", null: false
+    t.string "status", default: "OPEN"
+    t.string "strategy_id"
     t.datetime "updated_at", null: false
-    t.index ["account_id"], name: "index_settlement_lots_on_account_id"
-    t.index ["runtime_id"], name: "index_settlement_lots_on_runtime_id"
-    t.index ["trade_id"], name: "index_settlement_lots_on_trade_id"
+    t.index ["account_id"], name: "index_trade_lots_on_account_id"
+    t.index ["opening_trade_id"], name: "index_trade_lots_on_opening_trade_id"
   end
 
-  create_table "signals", force: :cascade do |t|
-    t.string "action", null: false
-    t.decimal "confidence"
-    t.datetime "created_at", null: false
-    t.decimal "entry_price"
-    t.bigint "investment_mandate_id", null: false
-    t.text "reasoning"
-    t.decimal "score"
-    t.string "status", default: "GENERATED"
-    t.decimal "stop_loss"
-    t.bigint "strategy_id", null: false
-    t.string "symbol", null: false
-    t.decimal "target_price"
-    t.string "time_horizon"
-    t.datetime "updated_at", null: false
-    t.index ["investment_mandate_id"], name: "index_signals_on_investment_mandate_id"
-    t.index ["strategy_id"], name: "index_signals_on_strategy_id"
-  end
-
-  create_table "strategies", force: :cascade do |t|
-    t.string "code", null: false
-    t.string "code_ref"
-    t.jsonb "config", default: {}
-    t.datetime "created_at", null: false
-    t.string "name", null: false
-    t.bigint "runtime_id", null: false
-    t.string "status", default: "ACTIVE"
-    t.string "strategy_type", default: "LONG_TERM"
-    t.datetime "updated_at", null: false
-    t.string "version", default: "1.0"
-    t.index ["runtime_id"], name: "index_strategies_on_runtime_id"
-  end
-
-  create_table "trades", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "executed_at"
-    t.bigint "order_id"
-    t.decimal "price"
-    t.integer "quantity"
-    t.bigint "runtime_id"
-    t.string "side"
-    t.string "symbol"
-    t.decimal "trade_value"
-    t.datetime "updated_at", null: false
-    t.index ["order_id"], name: "index_trades_on_order_id"
-    t.index ["runtime_id"], name: "index_trades_on_runtime_id"
-  end
-
-  add_foreign_key "accounts", "runtimes"
-  add_foreign_key "corporate_actions", "runtimes"
-  add_foreign_key "domain_events", "runtimes"
-  add_foreign_key "idempotency_keys", "runtimes"
-  add_foreign_key "investment_mandates", "strategies"
+  add_foreign_key "journal_entries", "accounts"
   add_foreign_key "ledger_entries", "accounts"
-  add_foreign_key "ledger_entries", "runtimes"
-  add_foreign_key "orders", "accounts"
-  add_foreign_key "orders", "runtimes"
-  add_foreign_key "orders", "strategies"
-  add_foreign_key "paper_execution_queues", "orders"
-  add_foreign_key "paper_execution_queues", "runtimes"
-  add_foreign_key "paper_funds", "accounts"
-  add_foreign_key "paper_funds", "runtimes"
-  add_foreign_key "paper_holdings", "accounts"
-  add_foreign_key "paper_holdings", "runtimes"
-  add_foreign_key "paper_margin_accounts", "accounts"
-  add_foreign_key "paper_margin_accounts", "runtimes"
-  add_foreign_key "paper_positions", "accounts"
-  add_foreign_key "paper_positions", "runtimes"
-  add_foreign_key "paper_risk_snapshots", "runtimes"
-  add_foreign_key "paper_risk_snapshots", "strategies"
-  add_foreign_key "portfolio_allocations", "runtimes"
-  add_foreign_key "portfolio_cashflows", "accounts"
-  add_foreign_key "portfolio_cashflows", "runtimes"
-  add_foreign_key "replay_sessions", "runtimes"
-  add_foreign_key "risk_profiles", "runtimes"
-  add_foreign_key "risk_profiles", "strategies"
-  add_foreign_key "runtime_configs", "runtimes"
-  add_foreign_key "runtimes", "broker_profiles"
-  add_foreign_key "settlement_lots", "accounts"
-  add_foreign_key "settlement_lots", "runtimes"
-  add_foreign_key "settlement_lots", "trades"
-  add_foreign_key "signals", "investment_mandates"
-  add_foreign_key "signals", "strategies"
-  add_foreign_key "strategies", "runtimes"
-  add_foreign_key "trades", "orders"
-  add_foreign_key "trades", "runtimes"
+  add_foreign_key "ledger_entries", "journal_entries"
+  add_foreign_key "lot_consumptions", "paper_trades", column: "closing_trade_id"
+  add_foreign_key "lot_consumptions", "trade_lots"
+  add_foreign_key "margin_events", "accounts"
+  add_foreign_key "order_status_transitions", "paper_orders"
+  add_foreign_key "paper_orders", "accounts"
+  add_foreign_key "paper_trades", "accounts"
+  add_foreign_key "paper_trades", "paper_orders"
+  add_foreign_key "trade_lots", "accounts"
+  add_foreign_key "trade_lots", "paper_trades", column: "opening_trade_id"
 end

@@ -1,0 +1,2 @@
+class CorporateActionEvent < ApplicationRecord
+end

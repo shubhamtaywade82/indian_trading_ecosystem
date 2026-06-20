@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../config/environment"
+require_relative "../lib/trading_system/bootstrap"
+
+Rails.logger.info("[Daemon] Starting core_trading daemon...")
+supervisor = TradingSystem::Bootstrap.boot!
+
+loop do
+  sleep 1
+  break unless supervisor.running?
+end
