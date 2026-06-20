@@ -2,7 +2,18 @@ require 'rails_helper'
 
 RSpec.describe "Phase 2: OMS State Machine", type: :model do
   let!(:account) { Account.create!(tenant_id: "t1", mode: "paper", name: "Test Paper Account") }
-  
+
+  before do
+    ENV.delete('BROKER_PROFILE')
+    MarginAccount.find_or_create_by!(account_id: account.id) do |ma|
+      ma.cash_balance      = 10_000_000
+      ma.blocked_margin    = 0
+      ma.available_margin  = 10_000_000
+      ma.mtm_pnl           = 0
+      ma.realized_pnl      = 0
+    end
+  end
+
   it "places, modifies, and cancels orders with proper validation and state transitions" do
     # 1. Place a valid order
     order = PlaceOrder.call(account: account, payload: {

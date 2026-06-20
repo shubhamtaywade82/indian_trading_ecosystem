@@ -42,20 +42,22 @@ class MatchingEngine
         # Prevent fractional volume logic bugs in pure simulation context
         fill_qty = fill_qty.to_i if fill_qty == fill_qty.to_i
         
-        # Phase 7: Slippage simulation (only on MARKET or triggered SL-M orders)
-        if %w[MARKET SL-M].include?(order.order_type)
+        # Phase 7: Slippage simulation — only when SIMULATE_SLIPPAGE=true (opt-in)
+        if ENV['SIMULATE_SLIPPAGE'] == 'true' && %w[MARKET SL-M].include?(order.order_type)
           fill_price = Paper::Execution::SlippageEngine.calculate(
             side: order.side,
             price: fill_price,
             qty: fill_qty,
             model: 'FIXED_BPS',
-            value: 5.0 # 5 bps default
+            value: 5.0
           )
         end
 
-        # Phase 7: Latency simulation
-        latency_ms = Paper::Execution::LatencySimulator.simulate(order: order, base_ms: 50, jitter_ms: 20)
-        sleep(latency_ms / 1000.0) if latency_ms > 0
+        # Phase 7: Latency simulation — only when SIMULATE_LATENCY=true (opt-in)
+        if ENV['SIMULATE_LATENCY'] == 'true'
+          latency_ms = Paper::Execution::LatencySimulator.simulate(order: order, base_ms: 50, jitter_ms: 20)
+          sleep(latency_ms / 1000.0) if latency_ms > 0
+        end
         
         OrderFiller.call(order: order, fill_qty: fill_qty, fill_price: fill_price)
         available_vol -= fill_qty
