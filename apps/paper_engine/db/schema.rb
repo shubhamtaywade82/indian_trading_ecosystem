@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_065914) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -56,6 +56,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_065914) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_ledger_entries_on_account_id"
     t.index ["runtime_id"], name: "index_ledger_entries_on_runtime_id"
+  end
+
+  create_table "margin_requirements", force: :cascade do |t|
+    t.decimal "cash_requirement_pct", default: "1.0"
+    t.datetime "created_at", null: false
+    t.decimal "exposure_margin_pct", default: "0.0"
+    t.string "product_type", null: false
+    t.string "segment", null: false
+    t.decimal "span_margin_pct", default: "0.0"
+    t.string "symbol"
+    t.datetime "updated_at", null: false
+    t.index ["segment", "product_type", "symbol"], name: "idx_margin_req_lookup", unique: true
   end
 
   create_table "orders", force: :cascade do |t|
@@ -122,6 +134,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_065914) do
     t.index ["runtime_id"], name: "index_paper_holdings_on_runtime_id"
   end
 
+  create_table "paper_margin_accounts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.decimal "available_margin", default: "0.0"
+    t.decimal "blocked_margin", default: "0.0"
+    t.decimal "cash_balance", default: "0.0"
+    t.datetime "created_at", null: false
+    t.decimal "mtm_pnl", default: "0.0"
+    t.decimal "realized_pnl", default: "0.0"
+    t.bigint "runtime_id", null: false
+    t.datetime "updated_at", null: false
+    t.decimal "utilized_margin", default: "0.0"
+    t.index ["account_id"], name: "index_paper_margin_accounts_on_account_id"
+    t.index ["runtime_id"], name: "index_paper_margin_accounts_on_runtime_id"
+  end
+
   create_table "paper_positions", force: :cascade do |t|
     t.bigint "account_id"
     t.decimal "average_price", default: "0.0"
@@ -185,6 +212,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_065914) do
   add_foreign_key "paper_funds", "runtimes"
   add_foreign_key "paper_holdings", "accounts"
   add_foreign_key "paper_holdings", "runtimes"
+  add_foreign_key "paper_margin_accounts", "accounts"
+  add_foreign_key "paper_margin_accounts", "runtimes"
   add_foreign_key "paper_positions", "accounts"
   add_foreign_key "paper_positions", "runtimes"
   add_foreign_key "runtime_configs", "runtimes"

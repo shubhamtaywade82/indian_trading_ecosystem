@@ -15,3 +15,4 @@
 #   inflect.acronym "RESTful"
 # end
 ActiveSupport::Inflector.inflections(:en) { |inflect| inflect.acronym 'OMS' }
+ActiveSupport::Inflector.inflections(:en) { |inflect| inflect.acronym 'RMS' }

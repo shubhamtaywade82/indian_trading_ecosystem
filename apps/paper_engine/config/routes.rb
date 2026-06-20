@@ -9,6 +9,9 @@ Rails.application.routes.draw do
       get 'depth/:symbol', to: 'runtime_data#depth'
       get 'orderbook/:symbol', to: 'runtime_data#orderbook'
       get 'executions', to: 'runtime_data#executions'
+
+      get 'margin', to: 'margin#index'
+      post 'margin/calculate', to: 'margin#calculate'
     end
   end
 end

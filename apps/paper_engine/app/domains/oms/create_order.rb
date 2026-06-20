@@ -4,6 +4,17 @@ module OMS
       validation = OrderValidator.validate(params.to_h)
       return { success: false, errors: validation[:errors] } unless validation[:valid]
 
+      rms_check = Broker::RMSEngine.evaluate(runtime, account, params)
+      if !rms_check[:success]
+        Events::DomainEvent.create!(
+          runtime: runtime,
+          event_type: 'order.rejected',
+          payload: { reason: rms_check[:reason] },
+          occurred_at: Time.current
+        )
+        return { success: false, errors: { rms: [rms_check[:reason]] } }
+      end
+
       order = Orders::Order.create!(
         runtime: runtime,
         account: account,
