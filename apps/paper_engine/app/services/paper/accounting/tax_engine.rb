@@ -31,13 +31,13 @@ module Paper
             account_id: trade_lot.account_id,
             reference_type: 'tax_liability',
             reference_id: consumption.id,
-            description: "\#{tax_type} Liability for consumption \#{consumption.id}"
+            description: "#{tax_type} Liability for consumption #{consumption.id}"
           )
           
           # Debit PnL (expense), Credit Tax Payable (liability)
           j.ledger_entries.create!(
             account_id: trade_lot.account_id,
-            ledger_account: "expense:tax:\#{tax_type.downcase}",
+            ledger_account: "expense:tax:#{tax_type.downcase}",
             debit: tax_liability
           )
           j.ledger_entries.create!(

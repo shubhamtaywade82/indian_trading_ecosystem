@@ -1,37 +1,27 @@
 module Api
   module V1
     class ReplayController < ApplicationController
+      # POST /api/v1/replay/start
       def start
-        session = Replay::HistoricalReplayEngine.start(
-          current_runtime.id,
-          params[:start_time] ? Time.parse(params[:start_time]) : 1.day.ago,
-          params[:end_time] ? Time.parse(params[:end_time]) : Time.current,
-          params[:mode] || 'TICK'
-        )
-        render json: session
+        ticks = params.require(:ticks).map(&:to_unsafe_h).map(&:symbolize_keys)
+        speed = params.fetch(:speed_multiplier, 0).to_f
+
+        replay = Paper::Replay::HistoricalReplayEngine.new(ticks, speed_multiplier: speed)
+
+        # Run async in a thread to not block the HTTP request
+        Thread.new { replay.run! }
+
+        render json: { status: 'STARTED', tick_count: ticks.length, speed_multiplier: speed }
       end
 
-      def pause
-        session = Replay::ReplaySession.find_by(runtime_id: current_runtime.id, status: 'ACTIVE')
-        session&.update!(status: 'PAUSED')
-        render json: { status: 'PAUSED' }
+      # POST /api/v1/replay/stop  (for future implementation with job tracking)
+      def stop
+        render json: { status: 'STOPPED' }
       end
 
-      def resume
-        session = Replay::ReplaySession.find_by(runtime_id: current_runtime.id, status: 'PAUSED')
-        session&.update!(status: 'ACTIVE')
-        render json: { status: 'ACTIVE' }
-      end
-
+      # GET /api/v1/replay/status
       def status
-        session = Replay::ReplaySession.where(runtime_id: current_runtime.id).last
-        render json: session || {}
-      end
-
-      private
-
-      def current_runtime
-        Runtime.first || Runtime.create!(name: "Test", mode: "paper", active: true)
+        render json: { status: 'IDLE' }
       end
     end
   end

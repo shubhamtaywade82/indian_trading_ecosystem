@@ -1,29 +1,26 @@
 module Api
   module V1
     class RiskController < ApplicationController
+      # GET /api/v1/risk/portfolio
       def portfolio
-        snapshot = Risk::RiskSnapshot.find_by(runtime: current_runtime, strategy_id: nil)
-        render json: snapshot || {}
+        profile = PaperRiskProfile.find_by(account: current_account, strategy_id: nil)
+        render json: profile || {}
       end
 
-      def strategies
-        snapshots = Risk::RiskSnapshot.where(runtime: current_runtime).where.not(strategy_id: nil)
-        render json: snapshots
-      end
-
+      # GET /api/v1/risk/snapshot
       def snapshot
-        render json: Risk::RiskSnapshot.where(runtime: current_runtime)
+        profiles = PaperRiskProfile.where(account: current_account)
+        render json: profiles
       end
 
+      # POST /api/v1/risk/kill_switch
       def kill_switch
-        Risk::KillSwitch.activate!(current_runtime.id, params[:strategy_id], 'MANUAL_INTERVENTION')
-        render json: { status: 'STOPPED' }
-      end
-
-      private
-
-      def current_runtime
-        Runtime.first || Runtime.create!(name: "Test", mode: "paper", active: true)
+        result = Paper::Risk::KillSwitch.halt!(
+          account_id: current_account.id,
+          strategy_id: params[:strategy_id],
+          reason: params[:reason] || 'MANUAL'
+        )
+        render json: { status: 'HALTED', details: result }
       end
     end
   end

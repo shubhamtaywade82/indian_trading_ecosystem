@@ -1,42 +1,63 @@
 module Api
   module V1
     class RuntimeDataController < ApplicationController
-      def trades
-        render json: current_runtime.trades
-      end
-
+      # GET /api/v1/positions
       def positions
-        render json: Projections::Position.where(runtime: current_runtime)
+        lots = TradeLot.where(account: current_account, status: 'OPEN')
+        data = lots.group_by(&:instrument_id).map do |instrument, open_lots|
+          qty = open_lots.sum { |l| l.remaining_qty }
+          avg_price = open_lots.sum { |l| l.entry_price * l.remaining_qty } / qty rescue 0
+          { instrument_id: instrument, qty: qty, avg_price: avg_price.round(2) }
+        end
+        render json: data
       end
 
+      # GET /api/v1/holdings
       def holdings
-        render json: Projections::Holding.where(runtime: current_runtime)
+        lots = TradeLot.where(account: current_account, status: 'OPEN', product_type: 'CNC')
+                       .joins(:opening_trade)
+                       .where(paper_trades: { side: 'buy' })
+        data = lots.group_by(&:instrument_id).map do |instrument, open_lots|
+          qty = open_lots.sum { |l| l.remaining_qty }
+          avg_price = open_lots.sum { |l| l.entry_price * l.remaining_qty } / qty rescue 0
+          { instrument_id: instrument, qty: qty, avg_price: avg_price.round(2) }
+        end
+        render json: data
       end
 
-      def funds
-        render json: Projections::Fund.where(runtime: current_runtime)
-      end
-
-      def depth
-        book = Exchange::OrderBook.for(current_runtime.id, params[:symbol])
-        render json: {
-          bids: [{ price: book.bid_price, quantity: book.bid_qty }],
-          asks: [{ price: book.ask_price, quantity: book.ask_qty }]
+      # GET /api/v1/trades
+      def trades
+        trades = PaperTrade.where(account: current_account).order(exchange_ts: :desc).limit(200)
+        render json: trades.map { |t|
+          {
+            id: t.id,
+            instrument_id: t.instrument_id,
+            side: t.side,
+            fill_qty: t.fill_qty,
+            fill_price: t.fill_price,
+            fill_value: t.fill_value,
+            exchange_ts: t.exchange_ts
+          }
         }
       end
 
-      def orderbook
-        depth
+      # GET /api/v1/funds
+      def funds
+        ma = MarginAccount.find_by(account_id: current_account.id)
+        render json: {
+          cash: ma&.cash_balance || 0,
+          available: ma&.available_margin || 0,
+          blocked: ma&.blocked_margin || 0,
+          realized_pnl: ma&.realized_pnl || 0
+        }
       end
 
-      def executions
-        trades
-      end
-
-      private
-
-      def current_runtime
-        Runtime.first || Runtime.create!(name: "Test", mode: "paper", active: true)
+      # GET /api/v1/depth/:symbol
+      def depth
+        orders = PaperOrder.where(instrument_id: params[:symbol], status: 'OPEN')
+        bids = orders.where(side: 'buy').order(price: :desc).limit(5).map { |o| { price: o.price, qty: o.qty } }
+        asks = orders.where(side: 'sell').order(price: :asc).limit(5).map { |o| { price: o.price, qty: o.qty } }
+        render json: { symbol: params[:symbol], bids: bids, asks: asks }
       end
     end
   end

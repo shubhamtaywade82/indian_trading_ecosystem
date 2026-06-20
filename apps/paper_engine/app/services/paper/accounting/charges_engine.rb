@@ -46,7 +46,7 @@ module Paper
           account_id: trade.account_id,
           reference_type: 'trade_charges',
           reference_id: trade.id,
-          description: "Charges for trade \#{trade.id}"
+          description: "Charges for trade #{trade.id}"
         )
 
         charges.each do |charge_type, amount|
@@ -55,7 +55,7 @@ module Paper
           # Debit the specific expense account
           journal.ledger_entries.create!(
             account_id: trade.account_id,
-            ledger_account: "expense:\#{charge_type}",
+            ledger_account: "expense:#{charge_type}",
             debit: amount
           )
         end
