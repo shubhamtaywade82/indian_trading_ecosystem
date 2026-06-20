@@ -7,14 +7,14 @@ module Paper
           if side == 'sell'
             # Short selling is not allowed in CNC unless holding exists.
             # Look up inventory from ledger.
-            inventory_balance = LedgerEntry.where(account: account, ledger_account: "inventory:\#{instrument_id}").sum(:credit) - 
-                                LedgerEntry.where(account: account, ledger_account: "inventory:\#{instrument_id}").sum(:debit)
+            inventory_balance = LedgerEntry.where(account: account, ledger_account: "inventory:#{instrument_id}").sum(:credit) - 
+                                LedgerEntry.where(account: account, ledger_account: "inventory:#{instrument_id}").sum(:debit)
             
             # Since asset inventory is debit normal, credit means sold. Wait.
             # Asset = Debit increases, Credit decreases.
             # So inventory is Debit - Credit
-            inventory = LedgerEntry.where(account: account, ledger_account: "inventory:\#{instrument_id}").sum(:debit) - 
-                        LedgerEntry.where(account: account, ledger_account: "inventory:\#{instrument_id}").sum(:credit)
+            inventory = LedgerEntry.where(account: account, ledger_account: "inventory:#{instrument_id}").sum(:debit) - 
+                        LedgerEntry.where(account: account, ledger_account: "inventory:#{instrument_id}").sum(:credit)
                         
             if inventory <= 0
               return { success: false, reason: 'Short selling not allowed in CNC without holdings' }

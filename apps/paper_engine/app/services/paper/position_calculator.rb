@@ -9,9 +9,9 @@ module Paper
 
       total_bought = buy_lots.sum(:original_qty)
       total_sold = sell_lots.sum(:original_qty)
-      net_qty = total_bought - total_sold
+      net_qty = buy_lots.sum(:remaining_qty)
 
-      open_lots = buy_lots.where(status: "open")
+      open_lots = buy_lots.where(status: "OPEN")
       total_remaining = open_lots.sum(:remaining_qty)
       total_cost = open_lots.sum("remaining_qty * entry_price")
 

@@ -1,6 +1,9 @@
 class ApplicationController < ActionController::API
+  class UnauthorizedError < StandardError; end
+
   rescue_from ActiveRecord::RecordNotFound, with: :not_found
   rescue_from ActionController::ParameterMissing, with: :bad_request
+  rescue_from UnauthorizedError, with: :unauthorized
 
   private
 
@@ -12,10 +15,13 @@ class ApplicationController < ActionController::API
     render json: { error: e.message }, status: :bad_request
   end
 
+  def unauthorized(e)
+    render json: { error: e.message }, status: :unauthorized
+  end
+
   def current_account
     account_id = request.headers['X-Account-Id'] || params[:account_id]
-    @current_account ||= Account.find_by!(id: account_id)
-  rescue ActiveRecord::RecordNotFound
-    render json: { error: 'Account not found' }, status: :unauthorized and return
+    raise UnauthorizedError, 'Account not found' if account_id.blank?
+    @current_account ||= Account.find_by(id: account_id) or raise UnauthorizedError, 'Account not found'
   end
 end

@@ -83,6 +83,9 @@ class TradeProcessor
 
           remaining_to_sell -= consume_qty
         end
+        if remaining_to_sell > 0
+          raise StandardError, "Cannot sell #{qty} shares of #{instrument}; only #{qty - remaining_to_sell} shares are available"
+        end
       end
 
       # 4. Post the basic trade to Ledger (Cash vs Inventory)

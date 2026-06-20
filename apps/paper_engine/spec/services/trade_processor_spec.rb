@@ -66,10 +66,10 @@ RSpec.describe TradeProcessor, type: :service do
     end
 
     it "updates ledger entries correctly" do
-      TradeProcessor.execute(account: account, instrument: "RELIANCE", side: 'buy', qty: 100, price: 1000)
+      trade = TradeProcessor.execute(account: account, instrument: "RELIANCE", side: 'buy', qty: 100, price: 1000)
 
-      cash_entry = LedgerEntry.where(account: account, ledger_account: 'cash').last
-      expect(cash_entry).to be_present
+      je = JournalEntry.find_by!(reference_type: 'trade', reference_id: trade.id)
+      cash_entry = je.ledger_entries.find_by!(ledger_account: 'cash')
       # Cash credited (cash OUT) on buy
       expect(cash_entry.credit.to_i).to eq(100_000)
     end

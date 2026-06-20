@@ -26,16 +26,21 @@ RSpec.describe "Phase 7: Market Realism (Slippage, Latency, Replay)", type: :mod
   end
 
   it "simulates slippage on MARKET orders" do
-    order = PlaceOrder.call(account: account, payload: {
-      instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100, price: 2500
-    })
-    
-    # 5 bps slippage on 2500 is 1.25, so buy price should be 2501.25
-    MatchingEngine.process_tick({ instrument_id: 'RELIANCE', ltp: 2500, volume: 100, time: Time.current })
-    
-    trade = PaperTrade.find_by(paper_order_id: order.id)
-    expect(trade).not_to be_nil
-    expect(trade.fill_price.to_f).to eq(2501.25)
+    ENV['SIMULATE_SLIPPAGE'] = 'true'
+    begin
+      order = PlaceOrder.call(account: account, payload: {
+        instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100, price: 2500
+      })
+      
+      # 5 bps slippage on 2500 is 1.25, so buy price should be 2501.25
+      MatchingEngine.process_tick({ instrument_id: 'RELIANCE', ltp: 2500, volume: 100, time: Time.current })
+      
+      trade = PaperTrade.find_by(paper_order_id: order.id)
+      expect(trade).not_to be_nil
+      expect(trade.fill_price.to_f).to eq(2501.25)
+    ensure
+      ENV.delete('SIMULATE_SLIPPAGE')
+    end
   end
 
   it "does not apply slippage on LIMIT orders" do

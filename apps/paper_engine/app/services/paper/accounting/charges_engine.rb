@@ -17,13 +17,12 @@ module Paper
           stamp = value * (profile.stamp_pct || 0)
           gst = (brokerage + exchange + sebi) * (profile.gst_pct || 0.18)
         else
-          # Sensible Indian defaults for CNC
           brokerage = 0
-          stt = trade.paper_order.product_type == 'CNC' ? value * 0.001 : value * 0.00025
-          exchange = value * 0.0000325
-          sebi = value * 0.000001
-          stamp = trade.side == 'buy' ? value * 0.00015 : 0
-          gst = (brokerage + exchange + sebi) * 0.18
+          stt = 0
+          exchange = 0
+          sebi = 0
+          stamp = 0
+          gst = 0
         end
         
         {

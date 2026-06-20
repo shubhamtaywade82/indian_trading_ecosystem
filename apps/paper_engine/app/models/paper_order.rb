@@ -62,4 +62,8 @@ class PaperOrder < ApplicationRecord
   def remaining_qty
     qty - filled_qty
   end
+
+  def cancellable?
+    PENDING? || OPEN? || PARTIALLY_FILLED?
+  end
 end

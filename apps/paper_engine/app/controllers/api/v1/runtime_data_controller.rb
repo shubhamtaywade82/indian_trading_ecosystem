@@ -45,10 +45,10 @@ module Api
       def funds
         ma = MarginAccount.find_by(account_id: current_account.id)
         render json: {
-          cash: ma&.cash_balance || 0,
-          available: ma&.available_margin || 0,
-          blocked: ma&.blocked_margin || 0,
-          realized_pnl: ma&.realized_pnl || 0
+          cash: (ma&.cash_balance || 0).to_f,
+          available: (ma&.available_margin || 0).to_f,
+          blocked: (ma&.blocked_margin || 0).to_f,
+          realized_pnl: (ma&.realized_pnl || 0).to_f
         }
       end
 
