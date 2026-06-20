@@ -4,6 +4,8 @@ module Core
 
     belongs_to :execution_profile, class_name: "Core::ExecutionProfile", foreign_key: "core_execution_profile_id", optional: true
 
+    store_accessor :settings, :broker, :paper_account_id
+
     validates :name, presence: true
     validates :mode, presence: true, inclusion: { in: %w[paper live backtest] }
     validates :market_data_source, presence: true
