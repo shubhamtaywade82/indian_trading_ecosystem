@@ -13,7 +13,7 @@ module Paper
         qty = payload[:qty]
         
         if profile.max_order_qty && qty > profile.max_order_qty
-          return error_response(profile, 'MAX_QTY_EXCEEDED', "Maximum order quantity is \#{profile.max_order_qty}")
+          return error_response(profile, 'MAX_QTY_EXCEEDED', "Maximum order quantity is #{profile.max_order_qty}")
         end
 
         if profile.block_penny_stocks && penny_stock?(instrument)
@@ -30,11 +30,11 @@ module Paper
       def self.error_response(profile, code, message)
         case profile.error_format
         when 'kite'
-          { success: false, reason: "InputException: \#{message}" }
+          { success: false, reason: "InputException: #{message}" }
         when 'dhan'
-          { success: false, reason: "RS-\#{code}: \#{message}" }
+          { success: false, reason: "RS-#{code}: #{message}" }
         else
-          { success: false, reason: "\#{code}: \#{message}" }
+          { success: false, reason: "#{code}: #{message}" }
         end
       end
 
