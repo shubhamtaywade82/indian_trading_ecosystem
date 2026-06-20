@@ -5,7 +5,7 @@ module Idempotent
     idempotency_key = request.headers['Idempotency-Key']
     
     if idempotency_key.present?
-      key_record = IdempotencyKey.find_by(runtime: current_runtime, key: idempotency_key)
+      key_record = ::Runtime::IdempotencyKey.find_by(runtime: current_runtime, key: idempotency_key)
       if key_record
         order = current_runtime.orders.find_by(id: key_record.resource_id)
         if order
@@ -18,7 +18,7 @@ module Idempotent
     yield
 
     if response.successful? && idempotency_key.present? && @order_id_for_idempotency
-      IdempotencyKey.create!(
+      ::Runtime::IdempotencyKey.create!(
         runtime: current_runtime,
         key: idempotency_key,
         resource_type: 'Orders::Order',

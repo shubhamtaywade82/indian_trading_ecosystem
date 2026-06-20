@@ -6,8 +6,8 @@ module OMS
       end
 
       # For simplicity, only validate price and quantity
-      new_quantity = params[:quantity] || order.quantity
-      new_price = params[:price] || order.price
+      new_quantity = params[:quantity].present? ? params[:quantity].to_i : order.quantity
+      new_price = params[:price].present? ? params[:price].to_f : order.price
 
       if new_quantity <= 0
         return { success: false, errors: { quantity: ["must be greater than 0"] } }
