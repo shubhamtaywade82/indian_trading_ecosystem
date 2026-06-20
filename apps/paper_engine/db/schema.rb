@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_072405) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -79,6 +79,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
     t.bigint "runtime_id"
     t.datetime "updated_at", null: false
     t.index ["runtime_id"], name: "index_idempotency_keys_on_runtime_id"
+  end
+
+  create_table "investment_mandates", force: :cascade do |t|
+    t.jsonb "allowed_segments", default: []
+    t.decimal "capital_allocation"
+    t.datetime "created_at", null: false
+    t.string "horizon"
+    t.decimal "max_drawdown"
+    t.string "name", null: false
+    t.string "rebalance_frequency"
+    t.decimal "risk_budget"
+    t.bigint "strategy_id", null: false
+    t.decimal "target_return"
+    t.datetime "updated_at", null: false
+    t.index ["strategy_id"], name: "index_investment_mandates_on_strategy_id"
   end
 
   create_table "ledger_entries", force: :cascade do |t|
@@ -220,6 +235,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
     t.index ["strategy_id"], name: "index_paper_risk_snapshots_on_strategy_id"
   end
 
+  create_table "portfolio_allocations", force: :cascade do |t|
+    t.jsonb "actual_weights", default: {}
+    t.decimal "cash_allocation"
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "runtime_id", null: false
+    t.jsonb "target_weights", default: {}
+    t.datetime "updated_at", null: false
+    t.index ["runtime_id"], name: "index_portfolio_allocations_on_runtime_id"
+  end
+
   create_table "portfolio_cashflows", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.decimal "amount", null: false
@@ -305,13 +331,36 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
     t.index ["trade_id"], name: "index_settlement_lots_on_trade_id"
   end
 
+  create_table "signals", force: :cascade do |t|
+    t.string "action", null: false
+    t.decimal "confidence"
+    t.datetime "created_at", null: false
+    t.decimal "entry_price"
+    t.bigint "investment_mandate_id", null: false
+    t.text "reasoning"
+    t.decimal "score"
+    t.string "status", default: "GENERATED"
+    t.decimal "stop_loss"
+    t.bigint "strategy_id", null: false
+    t.string "symbol", null: false
+    t.decimal "target_price"
+    t.string "time_horizon"
+    t.datetime "updated_at", null: false
+    t.index ["investment_mandate_id"], name: "index_signals_on_investment_mandate_id"
+    t.index ["strategy_id"], name: "index_signals_on_strategy_id"
+  end
+
   create_table "strategies", force: :cascade do |t|
     t.string "code", null: false
+    t.string "code_ref"
+    t.jsonb "config", default: {}
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.bigint "runtime_id", null: false
     t.string "status", default: "ACTIVE"
+    t.string "strategy_type", default: "LONG_TERM"
     t.datetime "updated_at", null: false
+    t.string "version", default: "1.0"
     t.index ["runtime_id"], name: "index_strategies_on_runtime_id"
   end
 
@@ -334,6 +383,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
   add_foreign_key "corporate_actions", "runtimes"
   add_foreign_key "domain_events", "runtimes"
   add_foreign_key "idempotency_keys", "runtimes"
+  add_foreign_key "investment_mandates", "strategies"
   add_foreign_key "ledger_entries", "accounts"
   add_foreign_key "ledger_entries", "runtimes"
   add_foreign_key "orders", "accounts"
@@ -351,6 +401,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
   add_foreign_key "paper_positions", "runtimes"
   add_foreign_key "paper_risk_snapshots", "runtimes"
   add_foreign_key "paper_risk_snapshots", "strategies"
+  add_foreign_key "portfolio_allocations", "runtimes"
   add_foreign_key "portfolio_cashflows", "accounts"
   add_foreign_key "portfolio_cashflows", "runtimes"
   add_foreign_key "replay_sessions", "runtimes"
@@ -361,6 +412,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
   add_foreign_key "settlement_lots", "accounts"
   add_foreign_key "settlement_lots", "runtimes"
   add_foreign_key "settlement_lots", "trades"
+  add_foreign_key "signals", "investment_mandates"
+  add_foreign_key "signals", "strategies"
   add_foreign_key "strategies", "runtimes"
   add_foreign_key "trades", "orders"
   add_foreign_key "trades", "runtimes"
