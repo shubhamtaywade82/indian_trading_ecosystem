@@ -29,6 +29,10 @@ Rails.application.routes.draw do
       post 'replay/pause', to: 'replay#pause'
       post 'replay/resume', to: 'replay#resume'
       get 'replay/status', to: 'replay#status'
+
+      get 'broker-profiles', to: 'broker_profiles#index'
+      post 'broker-profiles/:id/activate', to: 'broker_profiles#activate'
+      get 'broker-profiles/:id/capabilities', to: 'broker_profiles#capabilities'
     end
   end
 end

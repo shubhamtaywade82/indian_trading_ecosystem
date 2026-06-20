@@ -7,4 +7,5 @@ class Runtime < ApplicationRecord
   has_many :orders, class_name: "Orders::Order"
   has_many :trades, class_name: "Trades::Trade"
   has_many :domain_events, class_name: "Events::DomainEvent"
+  belongs_to :broker_profile, class_name: "BrokerProfiles::BrokerProfile", optional: true
 end

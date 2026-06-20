@@ -10,7 +10,7 @@ module Broker
       return { success: false, reason: 'EXPOSURE_BREACH' } unless exposure[:success]
 
       # 3. Margin Requirement
-      required_margin = MarginCalculator.calculate(params)
+      required_margin = BrokerProfiles::MarginEmulator.calculate_margin(runtime, account, params)
 
       margin_account = MarginAccount.find_or_initialize_by(runtime: runtime, account: account)
       

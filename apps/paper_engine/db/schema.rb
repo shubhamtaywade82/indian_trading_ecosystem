@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_071608) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_071851) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,6 +21,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071608) do
     t.bigint "runtime_id"
     t.datetime "updated_at", null: false
     t.index ["runtime_id"], name: "index_accounts_on_runtime_id"
+  end
+
+  create_table "broker_profiles", force: :cascade do |t|
+    t.boolean "active", default: true
+    t.string "broker_type", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.jsonb "rules", default: {}
+    t.datetime "updated_at", null: false
+    t.string "version", null: false
   end
 
   create_table "charge_profiles", force: :cascade do |t|
@@ -267,6 +277,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071608) do
 
   create_table "runtimes", force: :cascade do |t|
     t.boolean "active"
+    t.bigint "broker_profile_id"
     t.datetime "created_at", null: false
     t.string "latency_model", default: "NONE"
     t.string "mode"
@@ -276,6 +287,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071608) do
     t.string "spread_model", default: "HISTORICAL"
     t.datetime "updated_at", null: false
     t.uuid "uuid"
+    t.index ["broker_profile_id"], name: "index_runtimes_on_broker_profile_id"
   end
 
   create_table "settlement_lots", force: :cascade do |t|
@@ -345,6 +357,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071608) do
   add_foreign_key "risk_profiles", "runtimes"
   add_foreign_key "risk_profiles", "strategies"
   add_foreign_key "runtime_configs", "runtimes"
+  add_foreign_key "runtimes", "broker_profiles"
   add_foreign_key "settlement_lots", "accounts"
   add_foreign_key "settlement_lots", "runtimes"
   add_foreign_key "settlement_lots", "trades"
