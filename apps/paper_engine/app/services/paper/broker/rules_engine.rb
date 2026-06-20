@@ -2,9 +2,7 @@ module Paper
   module Broker
     class RulesEngine
       def self.evaluate(account:, payload:)
-        # Default to kite if nothing specified
-        broker_name = account.mode.split('_').last if account.mode.include?('_')
-        broker_name ||= 'kite'
+        broker_name = ENV['BROKER_PROFILE'] || 'kite'
         
         profile = BrokerProfile.find_by(broker_name: broker_name)
         
