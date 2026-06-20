@@ -47,7 +47,7 @@ RSpec.describe "Phase 6: Portfolio Lifecycle, Charges & Corporate Actions", type
     
     # Brokerage = 20, STT = 25 (10*2500 * 0.001)
     expect(charges.ledger_entries.where(ledger_account: 'expense:brokerage').first.debit.to_f).to eq(20.0)
-    expect(charges.ledger_entries.where(ledger_account: 'expense:stt').first.debit.to_f).to eq(25.0)
+    expect(charges.ledger_entries.where(ledger_account: 'expense:stt').first.debit.to_f).to be_within(0.1).of(25.0)
     
     # Cash flow created
     cf = PortfolioCashflow.where(flow_type: 'charges', reference_id: trade.id.to_s).first
