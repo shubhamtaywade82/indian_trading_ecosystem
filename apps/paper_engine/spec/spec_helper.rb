@@ -1,13 +1,8 @@
 # frozen_string_literal: true
 
 ENV["RAILS_ENV"] ||= "test"
-require_relative "../config/environment"
-abort("Production mode!") if Rails.env.production?
-require "rspec/rails"
-require "domain_models"
 
-RSpec.configure do |config|
-  config.use_transactional_fixtures = true
-  config.infer_spec_type_from_file_location!
-  config.filter_rails_from_backtrace!
-end
+require_relative "../config/environment"
+
+# Require Paper services
+Dir[Rails.root.join("app/services/paper/*.rb")].each { |f| require f }
