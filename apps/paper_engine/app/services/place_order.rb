@@ -35,6 +35,14 @@ class PlaceOrder
         return order
       end
 
+      # Phase 8: Broker Rules Engine Check (e.g. Kite / Dhan emulation)
+      broker_result = Paper::Broker::RulesEngine.evaluate(account: account, payload: payload)
+      unless broker_result[:success]
+        order.reject!
+        order.log_transition('PENDING', 'REJECTED', broker_result[:reason])
+        return order
+      end
+
       # RMS Check Phase 4
       rms_result = Paper::Broker::RmsEngine.evaluate(
         account: account,
