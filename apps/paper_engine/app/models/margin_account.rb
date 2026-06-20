@@ -1,0 +1,2 @@
+class MarginAccount < ApplicationRecord
+end

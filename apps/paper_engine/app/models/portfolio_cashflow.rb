@@ -1,0 +1,2 @@
+class PortfolioCashflow < ApplicationRecord
+end
