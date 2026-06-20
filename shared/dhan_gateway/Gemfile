@@ -1,0 +1,5 @@
+source "https://rubygems.org"
+gemspec
+gem "domain_models", path: "../domain_models"
+gem "rspec", "~> 3.12"
+gem "webmock", "~> 3.20"

@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: trading_secret
+      POSTGRES_DB: trading
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+
+  paper_engine:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.paper_engine
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgres://trading:trading_secret@postgres:5432/paper_engine
+      REDIS_URL: redis://redis:6379/0
+      RAILS_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  marketfeed:
+    build:
+      context: ..
+      dockerfile: infrastructure/Dockerfile.marketfeed
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+
+volumes:
+  pg_data:
+  redis_data:
