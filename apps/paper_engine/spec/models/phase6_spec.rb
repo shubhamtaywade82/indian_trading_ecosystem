@@ -34,7 +34,7 @@ RSpec.describe "Phase 6: Portfolio Lifecycle, Charges & Corporate Actions", type
 
   it "deducts charges and creates cashflows on buy trade" do
     order = PlaceOrder.call(account: account, payload: {
-      instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 100, price: 2500
+      instrument_id: 'RELIANCE', side: 'buy', order_type: 'MARKET', product_type: 'CNC', qty: 10, price: 2500
     })
     
     MatchingEngine.process_tick({ instrument_id: 'RELIANCE', ltp: 2500, volume: 100, time: Time.current })
@@ -45,9 +45,9 @@ RSpec.describe "Phase 6: Portfolio Lifecycle, Charges & Corporate Actions", type
     charges = JournalEntry.where(reference_type: 'trade_charges', reference_id: trade.id).first
     expect(charges).not_to be_nil
     
-    # Brokerage = 20, STT = 250 (100*2500 * 0.001)
+    # Brokerage = 20, STT = 25 (10*2500 * 0.001)
     expect(charges.ledger_entries.where(ledger_account: 'expense:brokerage').first.debit.to_f).to eq(20.0)
-    expect(charges.ledger_entries.where(ledger_account: 'expense:stt').first.debit.to_f).to eq(250.0)
+    expect(charges.ledger_entries.where(ledger_account: 'expense:stt').first.debit.to_f).to eq(25.0)
     
     # Cash flow created
     cf = PortfolioCashflow.where(flow_type: 'charges', reference_id: trade.id.to_s).first
