@@ -44,6 +44,10 @@ module Execution
       # Ledger
       Accounting::LedgerEngine.process(trade)
 
+      # Phase 6: Charges and Settlement
+      Accounting::ChargesEngine.post_charges(trade, order.runtime, order.account)
+      Accounting::SettlementEngine.create_pending_settlement(trade, order.runtime, order.account)
+
       # Update Order state
       new_filled = order.filled_quantity + fill_qty
       total_value = (order.filled_quantity * (order.average_price || 0)) + trade_value

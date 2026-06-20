@@ -36,6 +36,7 @@ module OMS
         price: params[:price] || 0.0,
         trigger_price: params[:trigger_price],
         product_type: params[:product_type],
+        segment: params[:segment] || 'equity',
         external_order_id: SecureRandom.uuid,
         status: 'pending',
         strategy_id: params[:strategy_id]

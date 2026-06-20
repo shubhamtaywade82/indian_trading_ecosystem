@@ -17,6 +17,13 @@ Rails.application.routes.draw do
       get 'risk/strategies', to: 'risk#strategies'
       get 'risk/snapshot', to: 'risk#snapshot'
       post 'risk/kill-switch', to: 'risk#kill_switch'
+
+      get 'charges', to: 'accounting#charges'
+      get 'settlements', to: 'accounting#settlements'
+      get 'corporate-actions', to: 'accounting#corporate_actions'
+      get 'dividends', to: 'accounting#dividends'
+      get 'tax-summary', to: 'accounting#tax_summary'
+      get 'cashflows', to: 'accounting#cashflows'
     end
   end
 end

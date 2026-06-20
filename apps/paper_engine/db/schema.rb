@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_071051) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,6 +21,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
     t.bigint "runtime_id"
     t.datetime "updated_at", null: false
     t.index ["runtime_id"], name: "index_accounts_on_runtime_id"
+  end
+
+  create_table "charge_profiles", force: :cascade do |t|
+    t.string "broker", null: false
+    t.decimal "brokerage_flat", default: "0.0"
+    t.decimal "brokerage_pct", default: "0.0"
+    t.datetime "created_at", null: false
+    t.decimal "exchange_pct", default: "0.0"
+    t.decimal "gst_pct", default: "0.0"
+    t.string "product_type", null: false
+    t.decimal "sebi_pct", default: "0.0"
+    t.string "segment", null: false
+    t.decimal "stamp_pct", default: "0.0"
+    t.decimal "stt_pct", default: "0.0"
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "corporate_actions", force: :cascade do |t|
+    t.string "action_type", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "details", default: {}
+    t.date "ex_date", null: false
+    t.date "record_date"
+    t.bigint "runtime_id", null: false
+    t.string "status", default: "PENDING"
+    t.string "symbol", null: false
+    t.datetime "updated_at", null: false
+    t.index ["runtime_id"], name: "index_corporate_actions_on_runtime_id"
   end
 
   create_table "domain_events", force: :cascade do |t|
@@ -182,6 +210,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
     t.index ["strategy_id"], name: "index_paper_risk_snapshots_on_strategy_id"
   end
 
+  create_table "portfolio_cashflows", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.decimal "amount", null: false
+    t.string "cashflow_type", null: false
+    t.datetime "created_at", null: false
+    t.string "reference_id"
+    t.string "reference_type"
+    t.bigint "runtime_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_portfolio_cashflows_on_account_id"
+    t.index ["runtime_id"], name: "index_portfolio_cashflows_on_runtime_id"
+  end
+
   create_table "risk_profiles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "max_daily_loss"
@@ -218,6 +259,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
     t.uuid "uuid"
   end
 
+  create_table "settlement_lots", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "quantity", null: false
+    t.bigint "runtime_id", null: false
+    t.date "settlement_date", null: false
+    t.string "status", default: "PENDING"
+    t.string "symbol", null: false
+    t.bigint "trade_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_settlement_lots_on_account_id"
+    t.index ["runtime_id"], name: "index_settlement_lots_on_runtime_id"
+    t.index ["trade_id"], name: "index_settlement_lots_on_trade_id"
+  end
+
   create_table "strategies", force: :cascade do |t|
     t.string "code", null: false
     t.datetime "created_at", null: false
@@ -244,6 +300,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
   end
 
   add_foreign_key "accounts", "runtimes"
+  add_foreign_key "corporate_actions", "runtimes"
   add_foreign_key "domain_events", "runtimes"
   add_foreign_key "idempotency_keys", "runtimes"
   add_foreign_key "ledger_entries", "accounts"
@@ -263,9 +320,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
   add_foreign_key "paper_positions", "runtimes"
   add_foreign_key "paper_risk_snapshots", "runtimes"
   add_foreign_key "paper_risk_snapshots", "strategies"
+  add_foreign_key "portfolio_cashflows", "accounts"
+  add_foreign_key "portfolio_cashflows", "runtimes"
   add_foreign_key "risk_profiles", "runtimes"
   add_foreign_key "risk_profiles", "strategies"
   add_foreign_key "runtime_configs", "runtimes"
+  add_foreign_key "settlement_lots", "accounts"
+  add_foreign_key "settlement_lots", "runtimes"
+  add_foreign_key "settlement_lots", "trades"
   add_foreign_key "strategies", "runtimes"
   add_foreign_key "trades", "orders"
   add_foreign_key "trades", "runtimes"
