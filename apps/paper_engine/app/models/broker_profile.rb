@@ -1,0 +1,2 @@
+class BrokerProfile < ApplicationRecord
+end
