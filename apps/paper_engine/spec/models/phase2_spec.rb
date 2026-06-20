@@ -43,7 +43,7 @@ RSpec.describe "Phase 2 Architecture", type: :model do
 
     # Replay
     expect(Runtime::ReplayRuntime.call(runtime)).to be_truthy
-    pos.reload
+    pos = Projections::Position.find_by(runtime: runtime, symbol: "RELIANCE")
     expect(pos.quantity).to eq(125)
   end
 end

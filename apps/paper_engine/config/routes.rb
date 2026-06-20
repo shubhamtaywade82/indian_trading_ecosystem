@@ -1,3 +1,7 @@
 Rails.application.routes.draw do
-  # Phase 0: no routes yet
+  namespace :api do
+    namespace :v1 do
+      resources :orders, only: [:create, :update, :destroy, :show, :index]
+    end
+  end
 end

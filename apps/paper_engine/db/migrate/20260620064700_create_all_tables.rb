@@ -10,6 +10,10 @@ class CreateAllTables < ActiveRecord::Migration[8.1]
 
     create_table :runtime_configs do |t|
       t.references :runtime, foreign_key: true
+      t.string :slippage_model
+      t.string :latency_model
+      t.string :brokerage_plan
+      t.integer :rng_seed
       t.jsonb :settings
       t.timestamps
     end
@@ -24,11 +28,22 @@ class CreateAllTables < ActiveRecord::Migration[8.1]
     create_table :orders do |t|
       t.references :runtime, foreign_key: true
       t.references :account, foreign_key: true
+      t.uuid :external_order_id
       t.string :symbol
       t.string :side
+      t.string :order_type
       t.integer :quantity
       t.decimal :price
       t.string :status
+      t.string :exchange
+      t.string :segment
+      t.string :product_type
+      t.string :validity
+      t.string :correlation_id
+      t.integer :filled_quantity, default: 0
+      t.decimal :trigger_price
+      t.decimal :average_price
+      t.datetime :expires_at
       t.timestamps
     end
 
@@ -67,6 +82,8 @@ class CreateAllTables < ActiveRecord::Migration[8.1]
     create_table :idempotency_keys do |t|
       t.references :runtime, foreign_key: true
       t.string :key
+      t.string :resource_type
+      t.bigint :resource_id
       t.timestamps
     end
 

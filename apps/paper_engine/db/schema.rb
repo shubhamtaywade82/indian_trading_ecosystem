@@ -36,6 +36,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_064700) do
   create_table "idempotency_keys", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "key"
+    t.bigint "resource_id"
+    t.string "resource_type"
     t.bigint "runtime_id"
     t.datetime "updated_at", null: false
     t.index ["runtime_id"], name: "index_idempotency_keys_on_runtime_id"
@@ -58,14 +60,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_064700) do
 
   create_table "orders", force: :cascade do |t|
     t.bigint "account_id"
+    t.decimal "average_price"
+    t.string "correlation_id"
     t.datetime "created_at", null: false
+    t.string "exchange"
+    t.datetime "expires_at"
+    t.uuid "external_order_id"
+    t.integer "filled_quantity", default: 0
+    t.string "order_type"
     t.decimal "price"
+    t.string "product_type"
     t.integer "quantity"
     t.bigint "runtime_id"
+    t.string "segment"
     t.string "side"
     t.string "status"
     t.string "symbol"
+    t.decimal "trigger_price"
     t.datetime "updated_at", null: false
+    t.string "validity"
     t.index ["account_id"], name: "index_orders_on_account_id"
     t.index ["runtime_id"], name: "index_orders_on_runtime_id"
   end
@@ -109,9 +122,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_064700) do
   end
 
   create_table "runtime_configs", force: :cascade do |t|
+    t.string "brokerage_plan"
     t.datetime "created_at", null: false
+    t.string "latency_model"
+    t.integer "rng_seed"
     t.bigint "runtime_id"
     t.jsonb "settings"
+    t.string "slippage_model"
     t.datetime "updated_at", null: false
     t.index ["runtime_id"], name: "index_runtime_configs_on_runtime_id"
   end
