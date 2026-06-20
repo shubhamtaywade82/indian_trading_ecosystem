@@ -20,6 +20,7 @@ Bundler.require(*Rails.groups)
 
 module PaperEngine
   class Application < Rails::Application
+    config.autoload_paths += Dir[Rails.root.join("app", "domains", "{*}")]
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
 

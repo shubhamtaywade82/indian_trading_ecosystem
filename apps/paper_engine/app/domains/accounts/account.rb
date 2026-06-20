@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
-module Accounts
-  class Account < ApplicationRecord
-    self.table_name = "accounts"
+class Account < ApplicationRecord
+  self.table_name = "accounts"
 
-    include RuntimeScoped
-  end
+  has_many :paper_orders, dependent: :destroy
+  has_many :paper_trades, dependent: :destroy
+  has_many :trade_lots, dependent: :destroy
+  has_many :journal_entries, dependent: :destroy
+  has_many :ledger_entries, dependent: :destroy
 end

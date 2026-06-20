@@ -1,7 +1,4 @@
-# frozen_string_literal: true
-
-module Orders
-  class Order < ApplicationRecord
-    self.table_name = "orders"
-  end
+class Order < ApplicationRecord
+  include RuntimeScoped
+  belongs_to :account
 end

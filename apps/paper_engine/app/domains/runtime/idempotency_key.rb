@@ -1,7 +1,3 @@
-# frozen_string_literal: true
-
-class Runtime::IdempotencyKey < ApplicationRecord
-  self.table_name = "idempotency_keys"
-
-  belongs_to :runtime
+class IdempotencyKey < ApplicationRecord
+  include RuntimeScoped
 end

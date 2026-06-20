@@ -1,7 +1,4 @@
-# frozen_string_literal: true
-
-module Accounting
-  class LedgerEntry < ApplicationRecord
-    self.table_name = "ledger_entries"
-  end
+class LedgerEntry < ApplicationRecord
+  include RuntimeScoped
+  belongs_to :account
 end
