@@ -13,6 +13,9 @@ module Exchange
           fill_price = book.ask_price > 0 ? book.ask_price : (book.ltp > 0 ? book.ltp : order.price)
           fill_qty = order.order_type == 'MARKET' ? remaining_qty : book.consume_ask_qty(remaining_qty)
           
+          # Phase 7: Apply Slippage
+          fill_price = Execution::SlippageEngine.apply(order.runtime_id, fill_price, fill_qty, 'BUY')
+          
           if fill_qty > 0
             trades << { quantity: fill_qty, price: fill_price }
             remaining_qty -= fill_qty

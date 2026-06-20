@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_071051) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_071608) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -223,6 +223,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071051) do
     t.index ["runtime_id"], name: "index_portfolio_cashflows_on_runtime_id"
   end
 
+  create_table "replay_sessions", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "current_time"
+    t.datetime "end_time"
+    t.string "latency_model", default: "NONE"
+    t.string "mode", default: "TICK"
+    t.bigint "runtime_id", null: false
+    t.string "slippage_model", default: "DEPTH_BASED"
+    t.string "spread_model", default: "HISTORICAL"
+    t.datetime "start_time"
+    t.string "status", default: "PENDING"
+    t.datetime "updated_at", null: false
+    t.index ["runtime_id"], name: "index_replay_sessions_on_runtime_id"
+  end
+
   create_table "risk_profiles", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.decimal "max_daily_loss"
@@ -253,8 +268,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071051) do
   create_table "runtimes", force: :cascade do |t|
     t.boolean "active"
     t.datetime "created_at", null: false
+    t.string "latency_model", default: "NONE"
     t.string "mode"
     t.string "name"
+    t.string "replay_mode", default: "TICK"
+    t.string "slippage_model", default: "DEPTH_BASED"
+    t.string "spread_model", default: "HISTORICAL"
     t.datetime "updated_at", null: false
     t.uuid "uuid"
   end
@@ -322,6 +341,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_071051) do
   add_foreign_key "paper_risk_snapshots", "strategies"
   add_foreign_key "portfolio_cashflows", "accounts"
   add_foreign_key "portfolio_cashflows", "runtimes"
+  add_foreign_key "replay_sessions", "runtimes"
   add_foreign_key "risk_profiles", "runtimes"
   add_foreign_key "risk_profiles", "strategies"
   add_foreign_key "runtime_configs", "runtimes"

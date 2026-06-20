@@ -24,6 +24,11 @@ Rails.application.routes.draw do
       get 'dividends', to: 'accounting#dividends'
       get 'tax-summary', to: 'accounting#tax_summary'
       get 'cashflows', to: 'accounting#cashflows'
+
+      post 'replay/start', to: 'replay#start'
+      post 'replay/pause', to: 'replay#pause'
+      post 'replay/resume', to: 'replay#resume'
+      get 'replay/status', to: 'replay#status'
     end
   end
 end

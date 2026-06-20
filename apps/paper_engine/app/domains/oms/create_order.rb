@@ -4,6 +4,11 @@ module OMS
       validation = OrderValidator.validate(params.to_h)
       return { success: false, errors: validation[:errors] } unless validation[:valid]
 
+      session_check = Market::SessionEngine.evaluate(runtime)
+      if !session_check[:success]
+        return { success: false, errors: { market: [session_check[:reason]] } }
+      end
+
       risk_check = Risk::RiskEngine.evaluate(runtime, params)
       if !risk_check[:success]
         Events::DomainEvent.create!(
