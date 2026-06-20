@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_064700) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_065914) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -81,6 +81,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_064700) do
     t.string "validity"
     t.index ["account_id"], name: "index_orders_on_account_id"
     t.index ["runtime_id"], name: "index_orders_on_runtime_id"
+  end
+
+  create_table "paper_execution_queues", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "order_id", null: false
+    t.decimal "price", null: false
+    t.bigint "queue_position", null: false
+    t.integer "remaining_quantity", null: false
+    t.bigint "runtime_id", null: false
+    t.string "side", null: false
+    t.string "symbol", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id"], name: "index_paper_execution_queues_on_order_id"
+    t.index ["runtime_id", "symbol", "side", "price", "queue_position"], name: "idx_execution_queue_priority"
+    t.index ["runtime_id"], name: "index_paper_execution_queues_on_runtime_id"
   end
 
   create_table "paper_funds", force: :cascade do |t|
@@ -164,6 +179,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_064700) do
   add_foreign_key "ledger_entries", "runtimes"
   add_foreign_key "orders", "accounts"
   add_foreign_key "orders", "runtimes"
+  add_foreign_key "paper_execution_queues", "orders"
+  add_foreign_key "paper_execution_queues", "runtimes"
   add_foreign_key "paper_funds", "accounts"
   add_foreign_key "paper_funds", "runtimes"
   add_foreign_key "paper_holdings", "accounts"

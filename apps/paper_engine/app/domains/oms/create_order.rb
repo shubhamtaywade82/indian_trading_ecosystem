@@ -34,6 +34,9 @@ module OMS
         occurred_at: Time.current
       )
 
+      # Trigger Exchange Simulation & Matching Engine (Phase 3)
+      Execution::ExecutionEngine.execute(order)
+
       { success: true, order: order }
     end
   end
