@@ -36,6 +36,7 @@ class TradeProcessor
           original_qty: qty,
           remaining_qty: qty,
           entry_price: price,
+          strategy_id: trade_order.strategy_id,
           status: 'OPEN'
         )
       else
@@ -56,6 +57,8 @@ class TradeProcessor
             realized_pnl: realized_pnl,
             costing_method: 'FIFO'
           )
+
+          Paper::Accounting::TaxEngine.handle_consumption(LotConsumption.last)
 
           lot.remaining_qty -= consume_qty
           lot.status = 'CLOSED' if lot.remaining_qty.zero?
@@ -84,6 +87,12 @@ class TradeProcessor
 
       # 4. Post the basic trade to Ledger (Cash vs Inventory)
       LedgerPoster.post_trade!(account: account, trade: trade)
+
+      # 5. Post Charges to Ledger
+      Paper::Accounting::ChargesEngine.post_to_ledger!(trade)
+
+      # 6. Record Settlement constraints
+      Paper::Accounting::SettlementEngine.handle_trade(trade)
 
       trade
     end
