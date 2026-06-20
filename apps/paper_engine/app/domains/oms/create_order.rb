@@ -4,6 +4,17 @@ module OMS
       validation = OrderValidator.validate(params.to_h)
       return { success: false, errors: validation[:errors] } unless validation[:valid]
 
+      risk_check = Risk::RiskEngine.evaluate(runtime, params)
+      if !risk_check[:success]
+        Events::DomainEvent.create!(
+          runtime: runtime,
+          event_type: 'order.rejected',
+          payload: { reason: risk_check[:reason] },
+          occurred_at: Time.current
+        )
+        return { success: false, errors: { risk: [risk_check[:reason]] } }
+      end
+
       rms_check = Broker::RMSEngine.evaluate(runtime, account, params)
       if !rms_check[:success]
         Events::DomainEvent.create!(
@@ -26,7 +37,8 @@ module OMS
         trigger_price: params[:trigger_price],
         product_type: params[:product_type],
         external_order_id: SecureRandom.uuid,
-        status: 'pending'
+        status: 'pending',
+        strategy_id: params[:strategy_id]
       )
 
       order.accept!

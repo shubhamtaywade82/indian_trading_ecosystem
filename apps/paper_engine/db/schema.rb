@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_20_070732) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -87,6 +87,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
     t.string "segment"
     t.string "side"
     t.string "status"
+    t.bigint "strategy_id"
     t.string "symbol"
     t.decimal "trigger_price"
     t.datetime "updated_at", null: false
@@ -163,6 +164,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
     t.index ["runtime_id"], name: "index_paper_positions_on_runtime_id"
   end
 
+  create_table "paper_risk_snapshots", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "daily_pnl", default: "0.0"
+    t.decimal "drawdown_pct", default: "0.0"
+    t.decimal "equity", default: "0.0"
+    t.integer "open_positions", default: 0
+    t.decimal "peak_equity", default: "0.0"
+    t.decimal "portfolio_value", default: "0.0"
+    t.bigint "runtime_id", null: false
+    t.jsonb "sector_exposure", default: {}
+    t.date "snapshot_date"
+    t.bigint "strategy_id"
+    t.jsonb "symbol_exposure", default: {}
+    t.datetime "updated_at", null: false
+    t.index ["runtime_id"], name: "index_paper_risk_snapshots_on_runtime_id"
+    t.index ["strategy_id"], name: "index_paper_risk_snapshots_on_strategy_id"
+  end
+
+  create_table "risk_profiles", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "max_daily_loss"
+    t.decimal "max_drawdown_pct"
+    t.integer "max_open_positions"
+    t.decimal "max_position_size"
+    t.decimal "max_sector_exposure_pct"
+    t.decimal "max_symbol_exposure_pct"
+    t.bigint "runtime_id", null: false
+    t.bigint "strategy_id"
+    t.datetime "updated_at", null: false
+    t.index ["runtime_id"], name: "index_risk_profiles_on_runtime_id"
+    t.index ["strategy_id"], name: "index_risk_profiles_on_strategy_id"
+  end
+
   create_table "runtime_configs", force: :cascade do |t|
     t.string "brokerage_plan"
     t.datetime "created_at", null: false
@@ -182,6 +216,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
     t.string "name"
     t.datetime "updated_at", null: false
     t.uuid "uuid"
+  end
+
+  create_table "strategies", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "runtime_id", null: false
+    t.string "status", default: "ACTIVE"
+    t.datetime "updated_at", null: false
+    t.index ["runtime_id"], name: "index_strategies_on_runtime_id"
   end
 
   create_table "trades", force: :cascade do |t|
@@ -206,6 +250,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
   add_foreign_key "ledger_entries", "runtimes"
   add_foreign_key "orders", "accounts"
   add_foreign_key "orders", "runtimes"
+  add_foreign_key "orders", "strategies"
   add_foreign_key "paper_execution_queues", "orders"
   add_foreign_key "paper_execution_queues", "runtimes"
   add_foreign_key "paper_funds", "accounts"
@@ -216,7 +261,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_20_070422) do
   add_foreign_key "paper_margin_accounts", "runtimes"
   add_foreign_key "paper_positions", "accounts"
   add_foreign_key "paper_positions", "runtimes"
+  add_foreign_key "paper_risk_snapshots", "runtimes"
+  add_foreign_key "paper_risk_snapshots", "strategies"
+  add_foreign_key "risk_profiles", "runtimes"
+  add_foreign_key "risk_profiles", "strategies"
   add_foreign_key "runtime_configs", "runtimes"
+  add_foreign_key "strategies", "runtimes"
   add_foreign_key "trades", "orders"
   add_foreign_key "trades", "runtimes"
 end

@@ -12,6 +12,11 @@ Rails.application.routes.draw do
 
       get 'margin', to: 'margin#index'
       post 'margin/calculate', to: 'margin#calculate'
+
+      get 'risk/portfolio', to: 'risk#portfolio'
+      get 'risk/strategies', to: 'risk#strategies'
+      get 'risk/snapshot', to: 'risk#snapshot'
+      post 'risk/kill-switch', to: 'risk#kill_switch'
     end
   end
 end
