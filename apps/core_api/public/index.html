@@ -660,13 +660,14 @@
           <form id="order-form" onsubmit="handleOrderSubmit(event)">
             <div class="form-group">
               <label for="order-symbol">Instrument / Symbol</label>
-              <select id="order-symbol" class="form-control">
-                <option value="RELIANCE">RELIANCE (Reliance Industries)</option>
-                <option value="INFY">INFY (Infosys Ltd)</option>
-                <option value="TCS">TCS (Tata Consultancy Services)</option>
-                <option value="HDFCBANK">HDFCBANK (HDFC Bank)</option>
-                <option value="ICICIBANK">ICICIBANK (ICICI Bank)</option>
-              </select>
+              <input type="text" id="order-symbol" class="form-control" placeholder="Search or Type Symbol (e.g. RELIANCE, TCS)..." list="symbols-list" required>
+              <datalist id="symbols-list">
+                <option value="RELIANCE">RELIANCE</option>
+                <option value="INFY">INFY</option>
+                <option value="TCS">TCS</option>
+                <option value="HDFCBANK">HDFCBANK</option>
+                <option value="ICICIBANK">ICICIBANK</option>
+              </datalist>
             </div>
             
             <div class="form-row">
@@ -773,10 +774,34 @@
       checkApiHealth();
       connectWebSocket();
       fetchRESTData();
+      setupAutocomplete();
       
       // Auto refresh static REST values every 10s as safety backup
       setInterval(fetchRESTData, 10000);
     });
+
+    function setupAutocomplete() {
+      const symbolInput = document.getElementById('order-symbol');
+      const symbolsDatalist = document.getElementById('symbols-list');
+
+      symbolInput.addEventListener('input', () => {
+        const query = symbolInput.value.trim();
+        if (query.length < 2) return;
+
+        fetch(`/api/v1/instruments?q=${encodeURIComponent(query)}`)
+          .then(res => res.json())
+          .then(data => {
+            symbolsDatalist.innerHTML = '';
+            data.forEach(inst => {
+              const opt = document.createElement('option');
+              opt.value = inst.symbol;
+              opt.innerText = `${inst.trading_symbol || inst.symbol} (${inst.exchange} - ${inst.instrument_type})`;
+              symbolsDatalist.appendChild(opt);
+            });
+          })
+          .catch(() => {});
+      });
+    }
 
     function checkApiHealth() {
       fetch('/api/v1/health')
