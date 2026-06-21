@@ -15,7 +15,11 @@ module Execution
         :instrument_id, :side, :order_type, :product_type, :qty, :price,
         :trigger_price, :tif, :strategy_id, :client_order_id
       )
+      order_data[:side] = order_data[:side].to_s.downcase if order_data[:side]
+      order_data[:order_type] = order_data[:order_type].to_s.upcase if order_data[:order_type]
+      order_data[:product_type] = order_data[:product_type].to_s.upcase if order_data[:product_type]
       order_data[:product_type] ||= 'CNC'
+      
       body = {
         order: order_data,
         account_id: @account_id
@@ -74,7 +78,10 @@ module Execution
     end
 
     def parse_response(response)
-      return { success: false, error: response[:error] } unless response[:success]
+      unless response[:success]
+        error_msg = response[:error] || response.dig(:data, :error) || "HTTP error #{response[:status_code]}"
+        return { success: false, error: error_msg }
+      end
       response[:data]
     end
   end

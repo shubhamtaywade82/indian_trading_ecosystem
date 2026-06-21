@@ -3,6 +3,18 @@ class MarginAccount < ApplicationRecord
 
   after_save :sync_to_ledger
 
+  def sync_from_ledger!
+    return unless account_id.present?
+    
+    actual_cash = LedgerEntry.where(account_id: account_id, ledger_account: 'cash').sum(:debit) - 
+                  LedgerEntry.where(account_id: account_id, ledger_account: 'cash').sum(:credit)
+    
+    update!(
+      cash_balance: actual_cash,
+      available_margin: actual_cash - blocked_margin
+    )
+  end
+
   private
 
   def sync_to_ledger

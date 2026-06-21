@@ -97,6 +97,10 @@ class TradeProcessor
       # 6. Record Settlement constraints
       Paper::Accounting::SettlementEngine.handle_trade(trade)
 
+      # Sync margin account cash with ledger
+      margin_acc = MarginAccount.find_by(account_id: account.id)
+      margin_acc&.sync_from_ledger!
+
       trade
     end
   end

@@ -44,6 +44,7 @@ module Api
       # GET /api/v1/funds
       def funds
         ma = MarginAccount.find_by(account_id: current_account.id)
+        ma&.sync_from_ledger!
         render json: {
           cash: (ma&.cash_balance || 0).to_f,
           available: (ma&.available_margin || 0).to_f,
