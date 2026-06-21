@@ -8,6 +8,10 @@ module Api
       def create
         payload = order_params.to_h.symbolize_keys
         result = execution_gateway.place_order(payload)
+        
+        # Trigger immediate dashboard broadcast
+        DashboardBroadcaster.broadcast_update!(current_runtime_config)
+        
         render json: result, status: :created
       end
 
@@ -23,6 +27,10 @@ module Api
 
       def destroy
         result = execution_gateway.cancel_order(params[:id])
+        
+        # Trigger immediate dashboard broadcast
+        DashboardBroadcaster.broadcast_update!(current_runtime_config)
+        
         render json: result
       end
 

@@ -48,6 +48,9 @@ module Api
         loop_runner = Core::TradingLoop.new(current_runtime_config, mandate, strategies)
         loop_runner.run!(market_data)
 
+        # Trigger immediate dashboard broadcast
+        DashboardBroadcaster.broadcast_update!(current_runtime_config)
+
         render json: { status: 'REBALANCE_SUBMITTED' }
       end
 

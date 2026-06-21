@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARTHX Trading Ecosystem Dashboard</title>
+  
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* --------------------------------------------------
+       CSS Variables & Global Styles
+       -------------------------------------------------- */
+    :root {
+      --bg-gradient: radial-gradient(circle at top left, #0b0d19, #05060b);
+      --panel-bg: rgba(18, 22, 39, 0.65);
+      --panel-border: rgba(255, 255, 255, 0.07);
+      --accent-cyan: #00f2fe;
+      --accent-cyan-glow: rgba(0, 242, 254, 0.25);
+      --accent-blue: #4facfe;
+      --accent-purple: #7f00ff;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --success-green: #00e676;
+      --success-bg: rgba(0, 230, 118, 0.12);
+      --success-border: rgba(0, 230, 118, 0.3);
+      --danger-red: #ff3d00;
+      --danger-bg: rgba(255, 61, 0, 0.12);
+      --danger-border: rgba(255, 61, 0, 0.3);
+      --warning-orange: #ff9100;
+      --warning-bg: rgba(255, 145, 0, 0.12);
+      --warning-border: rgba(255, 145, 0, 0.3);
+      --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #05060b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1c223a;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-cyan);
+    }
+
+    /* --------------------------------------------------
+       Layout & Components
+       -------------------------------------------------- */
+    header {
+      background: rgba(10, 13, 27, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #05060b;
+      font-size: 1.1rem;
+      box-shadow: 0 0 15px var(--accent-cyan-glow);
+    }
+
+    .logo-text {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1.3rem;
+      letter-spacing: 1px;
+      background: linear-gradient(to right, #ffffff, #8b9bb4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: 0.85rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 0.35rem 0.75rem;
+      border-radius: 30px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .status-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--success-green);
+      box-shadow: 0 0 10px var(--success-green);
+      animation: pulse 1.8s infinite alternate;
+    }
+
+    .status-pulse.disconnected {
+      background-color: var(--danger-red);
+      box-shadow: 0 0 10px var(--danger-red);
+    }
+
+    .status-pulse.replaying {
+      background-color: var(--warning-orange);
+      box-shadow: 0 0 10px var(--warning-orange);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .dashboard-container {
+      max-width: 1600px;
+      width: 100%;
+      margin: 1.5rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      flex: 1;
+    }
+
+    /* Glassmorphic Panel Base */
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.75rem;
+    }
+
+    .panel-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* --------------------------------------------------
+       Metrics Grid
+       -------------------------------------------------- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, rgba(24, 29, 54, 0.8), rgba(12, 14, 28, 0.8));
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: transparent;
+    }
+
+    .metric-card.primary::before {
+      background: linear-gradient(to right, var(--accent-cyan), var(--accent-blue));
+    }
+
+    .metric-card.success::before {
+      background: var(--success-green);
+    }
+
+    .metric-card.warning::before {
+      background: var(--warning-orange);
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.75px;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .metric-change {
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .change-positive { color: var(--success-green); }
+    .change-negative { color: var(--danger-red); }
+    .change-neutral { color: var(--text-muted); }
+
+    /* --------------------------------------------------
+       Main Work Area (2 Columns)
+       -------------------------------------------------- */
+    .workspace-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Tables & Lists */
+    .table-container {
+      overflow-x: auto;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .symbol-cell {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      color: var(--accent-cyan);
+    }
+
+    .mono {
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-buy { background: var(--success-bg); color: var(--success-green); border: 1px solid var(--success-border); }
+    .badge-sell { background: var(--danger-bg); color: var(--danger-red); border: 1px solid var(--danger-border); }
+    
+    .badge-filled { background: var(--success-bg); color: var(--success-green); border: 1px solid var(--success-border); }
+    .badge-open { background: rgba(0, 242, 254, 0.1); color: var(--accent-cyan); border: 1px solid rgba(0, 242, 254, 0.25); }
+    .badge-pending { background: var(--warning-bg); color: var(--warning-orange); border: 1px solid var(--warning-border); }
+    .badge-cancelled { background: rgba(255, 255, 255, 0.06); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.15); }
+    .badge-rejected { background: var(--danger-bg); color: var(--danger-red); border: 1px solid var(--danger-border); }
+
+    /* --------------------------------------------------
+       Forms & Interactions
+       -------------------------------------------------- */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(10, 13, 27, 0.5);
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #05060b;
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.35);
+    }
+
+    .btn-danger {
+      background: var(--danger-red);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(255, 61, 0, 0.2);
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(255, 61, 0, 0.35);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-main);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-sm {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.8rem;
+      border-radius: 4px;
+    }
+
+    /* --------------------------------------------------
+       Console Log / Activity Stream
+       -------------------------------------------------- */
+    .console-log {
+      background: #05060b;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      padding: 0.75rem;
+      height: 200px;
+      overflow-y: auto;
+      color: #00ff66;
+    }
+
+    .console-line {
+      margin-bottom: 0.25rem;
+      white-space: pre-wrap;
+    }
+
+    .console-timestamp {
+      color: var(--text-muted);
+    }
+
+    .console-type-ws {
+      color: var(--accent-cyan);
+    }
+
+    .console-type-error {
+      color: var(--danger-red);
+    }
+
+    /* Tab controls */
+    .tab-nav {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.4rem 0.8rem;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-bottom: 2px transparent solid;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent-cyan);
+      border-bottom-color: var(--accent-cyan);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-icon">Ω</div>
+      <div class="logo-text">ARTHX ALPHA</div>
+    </div>
+    
+    <div class="system-status">
+      <div class="status-item">
+        <span>API Status:</span>
+        <div id="api-status-dot" class="status-pulse"></div>
+      </div>
+      <div class="status-item">
+        <span>WS Feed:</span>
+        <div id="ws-status-dot" class="status-pulse disconnected"></div>
+        <span id="ws-status-text">Connecting...</span>
+      </div>
+      <div class="status-item">
+        <span>Runtime Config:</span>
+        <strong id="header-config-name" style="color: var(--accent-cyan);">main</strong>
+      </div>
+      <div class="status-item">
+        <span>Mode:</span>
+        <strong id="header-config-mode" style="text-transform: uppercase;">paper</strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="dashboard-container">
+    
+    <!-- 1. Metrics Row -->
+    <div class="metrics-grid">
+      <div class="metric-card primary">
+        <div class="metric-label">Total Net Worth</div>
+        <div id="metric-total-value" class="metric-value">₹1,000,000.00</div>
+        <div class="metric-change">
+          <span class="change-positive">★ Real-time active ledger</span>
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Cash Balance</div>
+        <div id="metric-cash-balance" class="metric-value">₹1,000,000.00</div>
+        <div class="metric-change">
+          <span id="metric-blocked-margin" class="change-neutral">Blocked Margin: ₹0.00</span>
+        </div>
+      </div>
+      <div class="metric-card success">
+        <div class="metric-label">Invested Value</div>
+        <div id="metric-position-value" class="metric-value">₹0.00</div>
+        <div class="metric-change">
+          <span id="metric-pos-count" class="change-neutral">0 active allocations</span>
+        </div>
+      </div>
+      <div class="metric-card warning">
+        <div class="metric-label">Strategy Signals</div>
+        <div id="metric-signals-status" class="metric-value">PENDING</div>
+        <div class="metric-change">
+          <span class="change-neutral">EmaXoverMomentum monitor</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Workspace Area -->
+    <div class="workspace-layout">
+      
+      <!-- Left Column: Tables -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <!-- Open Positions -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-briefcase"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+              Current Positions
+            </h2>
+            <button class="btn btn-outline btn-sm" onclick="fetchRESTData()">Refresh</button>
+          </div>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Quantity</th>
+                  <th>Avg Cost</th>
+                  <th>Current Price</th>
+                  <th>Current Value</th>
+                  <th>Total Return (P&L)</th>
+                </tr>
+              </thead>
+              <tbody id="positions-table-body">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted);">No open positions active.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Orders Log -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-activity"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              Recent Orders Log
+            </h2>
+          </div>
+          
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Symbol</th>
+                  <th>Side</th>
+                  <th>Type</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table-body">
+                <tr>
+                  <td colspan="8" style="text-align: center; color: var(--text-muted);">No orders found.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Control Panel / Forms -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <!-- Order Placement Form -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-shopping-cart"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+              Execute Simulated Order
+            </h2>
+          </div>
+          
+          <form id="order-form" onsubmit="handleOrderSubmit(event)">
+            <div class="form-group">
+              <label for="order-symbol">Instrument / Symbol</label>
+              <select id="order-symbol" class="form-control">
+                <option value="RELIANCE">RELIANCE (Reliance Industries)</option>
+                <option value="INFY">INFY (Infosys Ltd)</option>
+                <option value="TCS">TCS (Tata Consultancy Services)</option>
+                <option value="HDFCBANK">HDFCBANK (HDFC Bank)</option>
+                <option value="ICICIBANK">ICICIBANK (ICICI Bank)</option>
+              </select>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="order-side">Side</label>
+                <select id="order-side" class="form-control">
+                  <option value="BUY">BUY</option>
+                  <option value="SELL">SELL</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="order-product">Product Type</label>
+                <select id="order-product" class="form-control">
+                  <option value="CNC">CNC (Cash n Carry - 100%)</option>
+                  <option value="MIS">MIS (Margin Intraday - 20%)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="order-qty">Quantity</label>
+                <input type="number" id="order-qty" class="form-control" value="10" min="1" step="1" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="order-price">Price (₹)</label>
+                <input type="number" id="order-price" class="form-control" value="2500" min="0.05" step="0.05" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="order-type">Order Type</label>
+                <select id="order-type" class="form-control">
+                  <option value="LIMIT">LIMIT</option>
+                  <option value="MARKET">MARKET</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="order-strategy">Strategy Tag</label>
+                <input type="text" id="order-strategy" class="form-control" value="MANUAL_DEV">
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+              Submit Simulated Order
+            </button>
+          </form>
+        </div>
+
+        <!-- Strategy Engine control panel -->
+        <div class="glass-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-cpu"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+              Manual Rebalancing Loop
+            </h2>
+          </div>
+          
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; line-height: 1.4;">
+            Post mock exchange candles data directly into the Strategy Engine to trigger optimization, asset weights calculation, and construction of rebalancing trades.
+          </p>
+
+          <button onclick="triggerRebalance()" class="btn btn-outline" style="width: 100%;">
+            Trigger Strategy Rebalance
+          </button>
+        </div>
+
+        <!-- System activity monitor log -->
+        <div class="glass-panel" style="flex: 1; display: flex; flex-direction: column;">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-terminal"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              WebSocket Streams
+            </h2>
+            <button class="btn btn-outline btn-sm" onclick="clearLogs()">Clear</button>
+          </div>
+          
+          <div id="console-output" class="console-log">
+            <div class="console-line"><span class="console-timestamp">[00:00:00]</span> Welcome to ARTHX Dashboard Console client.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- --------------------------------------------------
+       JavaScript Logic
+       -------------------------------------------------- -->
+  <script>
+    let ws = null;
+    let wsReconnectTimeout = null;
+
+    // --------------------------------------------------
+    // Initial Boot & API configuration
+    // --------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      checkApiHealth();
+      connectWebSocket();
+      fetchRESTData();
+      
+      // Auto refresh static REST values every 10s as safety backup
+      setInterval(fetchRESTData, 10000);
+    });
+
+    function checkApiHealth() {
+      fetch('/api/v1/health')
+        .then(response => {
+          const dot = document.getElementById('api-status-dot');
+          if (response.ok) {
+            dot.className = "status-pulse";
+          } else {
+            dot.className = "status-pulse disconnected";
+          }
+        })
+        .catch(() => {
+          document.getElementById('api-status-dot').className = "status-pulse disconnected";
+        });
+    }
+
+    // --------------------------------------------------
+    // Action Cable WebSocket Connection
+    // --------------------------------------------------
+    function connectWebSocket() {
+      const loc = window.location;
+      const wsUrl = (loc.protocol === "https:" ? "wss://" : "ws://") + loc.host + "/cable";
+      
+      logToConsole("Initializing WebSocket connection to " + wsUrl, "ws");
+      
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        logToConsole("WebSocket Connection Established.", "ws");
+        document.getElementById('ws-status-dot').className = "status-pulse";
+        document.getElementById('ws-status-text').innerText = "Streaming Active";
+        
+        // Subscribe to DashboardChannel
+        subscribeToDashboard();
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        
+        // Action Cable protocol messages
+        if (msg.type === "ping") return; // Filter keepalive ticks
+        
+        if (msg.type === "welcome") {
+          logToConsole("Action Cable Handshake Welcome received.", "ws");
+          return;
+        }
+
+        if (msg.type === "confirm_subscription") {
+          logToConsole("Subscribed to DashboardChannel successfully.", "ws");
+          return;
+        }
+
+        // Handle custom data payload from our Channel
+        if (msg.message) {
+          handleIncomingChannelMessage(msg.message);
+        }
+      };
+
+      ws.onerror = (err) => {
+        logToConsole("WebSocket encountered error.", "error");
+        document.getElementById('ws-status-dot').className = "status-pulse disconnected";
+        document.getElementById('ws-status-text').innerText = "Error";
+      };
+
+      ws.onclose = () => {
+        logToConsole("WebSocket connection closed. Attempting reconnect in 5 seconds...", "error");
+        document.getElementById('ws-status-dot').className = "status-pulse disconnected";
+        document.getElementById('ws-status-text').innerText = "Disconnected";
+        
+        // Reconnect loop
+        clearTimeout(wsReconnectTimeout);
+        wsReconnectTimeout = setTimeout(connectWebSocket, 5000);
+      };
+    }
+
+    function subscribeToDashboard() {
+      const subscribeCommand = {
+        command: "subscribe",
+        identifier: JSON.stringify({ channel: "DashboardChannel" })
+      };
+      ws.send(JSON.stringify(subscribeCommand));
+    }
+
+    // --------------------------------------------------
+    // Handle Incoming WebSocket Payloads
+    // --------------------------------------------------
+    function handleIncomingChannelMessage(message) {
+      if (message.type === "initial_state" || message.type === "update") {
+        const data = message.data;
+        logToConsole(`Received feed frame: [type=${message.type}] cash=₹${parseFloat(data.cash).toFixed(2)}`, "ws");
+        updateMetrics(data);
+        renderPositions(data.positions);
+        renderOrders(data.orders);
+      } else if (message.type === "error") {
+        logToConsole(`Server channel error: ${message.message}`, "error");
+      }
+    }
+
+    // --------------------------------------------------
+    // REST API Integration Fallbacks & Actions
+    // --------------------------------------------------
+    function fetchRESTData() {
+      fetch('/api/v1/portfolio/summary')
+        .then(res => res.json())
+        .then(data => {
+          updateMetricsFromREST(data);
+          renderPositions(data.positions);
+        })
+        .catch(err => logToConsole(`Error loading portfolio: ${err.message}`, "error"));
+
+      fetch('/api/v1/orders')
+        .then(res => res.json())
+        .then(orders => renderOrders(orders))
+        .catch(err => logToConsole(`Error loading orders: ${err.message}`, "error"));
+    }
+
+    // --------------------------------------------------
+    // UI Updaters
+    // --------------------------------------------------
+    function updateMetrics(data) {
+      document.getElementById('header-config-name').innerText = data.runtime_config?.name || 'main';
+      document.getElementById('header-config-mode').innerText = data.runtime_config?.mode || 'paper';
+      
+      document.getElementById('metric-total-value').innerText = formatCurrency(data.total_value);
+      document.getElementById('metric-cash-balance').innerText = formatCurrency(data.cash);
+      document.getElementById('metric-blocked-margin').innerText = `Blocked Margin: ${formatCurrency(data.funds?.blocked || 0)}`;
+      document.getElementById('metric-position-value').innerText = formatCurrency(data.position_value);
+      
+      const count = data.positions.is_a ? 0 : Object.keys(data.positions || {}).length;
+      document.getElementById('metric-pos-count').innerText = `${count} active allocations`;
+      
+      if (data.orders && data.orders.length > 0) {
+        document.getElementById('metric-signals-status').innerText = 'ACTIVE';
+        document.getElementById('metric-signals-status').style.color = 'var(--success-green)';
+      }
+    }
+
+    function updateMetricsFromREST(data) {
+      document.getElementById('metric-total-value').innerText = formatCurrency(data.total_value);
+      document.getElementById('metric-cash-balance').innerText = formatCurrency(data.available_cash);
+      document.getElementById('metric-position-value').innerText = formatCurrency(data.total_value - data.available_cash);
+      document.getElementById('metric-pos-count').innerText = `${data.position_count} active allocations`;
+    }
+
+    function renderPositions(positions) {
+      const tbody = document.getElementById('positions-table-body');
+      
+      if (!positions || Object.keys(positions).length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No open positions active.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      Object.entries(positions).forEach(([sym, data]) => {
+        const qty = parseInt(data.qty || 0);
+        const avg = parseFloat(data.avg_price || 0);
+        const value = parseFloat(data.value || 0);
+        
+        // Compute fake market price & PNL for display
+        const mktPrice = qty !== 0 ? value / qty : avg;
+        const pnl = value - (qty * avg);
+        const pnlClass = pnl > 0 ? 'change-positive' : (pnl < 0 ? 'change-negative' : 'change-neutral');
+        const pnlSign = pnl > 0 ? '+' : '';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="symbol-cell">${sym}</td>
+          <td class="mono">${qty}</td>
+          <td class="mono">${formatCurrency(avg)}</td>
+          <td class="mono">${formatCurrency(mktPrice)}</td>
+          <td class="mono">${formatCurrency(value)}</td>
+          <td class="mono ${pnlClass}" style="font-weight:600;">${pnlSign}${formatCurrency(pnl)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderOrders(orders) {
+      const tbody = document.getElementById('orders-table-body');
+      
+      if (!orders || orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted);">No orders found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = '';
+      orders.forEach(o => {
+        const id = o.id || o.external_order_id || 'N/A';
+        const symbol = o.symbol || o.instrument_id || 'UNKNOWN';
+        const side = (o.side || 'BUY').toUpperCase();
+        const sideClass = side === 'BUY' ? 'badge-buy' : 'badge-sell';
+        const type = o.order_type || 'LIMIT';
+        const qty = o.qty || o.quantity || 0;
+        const price = parseFloat(o.price || 0);
+        const status = (o.status || 'PENDING').toUpperCase();
+        
+        let statusClass = 'badge-pending';
+        if (status === 'FILLED') statusClass = 'badge-filled';
+        if (status === 'OPEN') statusClass = 'badge-open';
+        if (status === 'CANCELLED') statusClass = 'badge-cancelled';
+        if (status === 'REJECTED') statusClass = 'badge-rejected';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="mono" style="font-size:0.8rem; color:var(--text-muted);">${id.substring(0, 12)}</td>
+          <td class="symbol-cell">${symbol}</td>
+          <td><span class="badge ${sideClass}">${side}</span></td>
+          <td>${type}</td>
+          <td class="mono">${qty}</td>
+          <td class="mono">${formatCurrency(price)}</td>
+          <td><span class="badge ${statusClass}">${status}</span></td>
+          <td>
+            ${status === 'OPEN' || status === 'PENDING' || status === 'PARTIALLY_FILLED' ? 
+              `<button class="btn btn-danger btn-sm" onclick="cancelOrder('${id}')">Cancel</button>` : 
+              `<span style="color:var(--text-muted); font-size:0.8rem;">-</span>`
+            }
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --------------------------------------------------
+    // Actions & Submissions
+    // --------------------------------------------------
+    function handleOrderSubmit(e) {
+      e.preventDefault();
+      
+      const payload = {
+        order: {
+          instrument_id: document.getElementById('order-symbol').value,
+          side: document.getElementById('order-side').value,
+          product_type: document.getElementById('order-product').value,
+          qty: parseInt(document.getElementById('order-qty').value),
+          price: parseFloat(document.getElementById('order-price').value),
+          order_type: document.getElementById('order-type').value,
+          strategy_id: document.getElementById('order-strategy').value
+        }
+      };
+
+      logToConsole(`Placing simulated order for ${payload.order.qty} ${payload.order.instrument_id}...`, "ws");
+
+      fetch('/api/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Order creation rejected or failed.");
+        return res.json();
+      })
+      .then(data => {
+        logToConsole(`Order success: ID=${data.id || data.external_order_id || 'N/A'}, status=${data.status}`, "ws");
+        fetchRESTData();
+      })
+      .catch(err => {
+        logToConsole(`Order failed: ${err.message}`, "error");
+      });
+    }
+
+    function cancelOrder(id) {
+      logToConsole(`Cancelling order ID: ${id}`, "ws");
+      fetch(`/api/v1/orders/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+          logToConsole(`Order cancellation: ${data.status || 'OK'}`, "ws");
+          fetchRESTData();
+        })
+        .catch(err => logToConsole(`Cancel failed: ${err.message}`, "error"));
+    }
+
+    function triggerRebalance() {
+      logToConsole("Mocking market data tick and invoking Rebalance Engine Loop...", "ws");
+      
+      // Inject Mock NSE candles to feed the trading daemon rebalance endpoint
+      const mockPayload = {
+        market_data: {
+          RELIANCE: [
+            { close: 2505.0 }, { close: 2510.0 }, { close: 2508.0 }, { close: 2515.0 },
+            { close: 2520.0 }, { close: 2518.0 }, { close: 2525.0 }, { close: 2530.0 },
+            { close: 2528.0 }, { close: 2535.0 }, { close: 2540.0 }, { close: 2538.0 },
+            { close: 2545.0 }, { close: 2550.0 }, { close: 2548.0 }, { close: 2555.0 },
+            { close: 2560.0 }, { close: 2558.0 }, { close: 2565.0 }, { close: 2570.0 },
+            { close: 2568.0 }, { close: 2575.0 }, { close: 2580.0 }, { close: 2578.0 },
+            { close: 2585.0 }, { close: 2590.0 }, { close: 2588.0 }, { close: 2595.0 },
+            { close: 2600.0 }, { close: 2610.0 } // Ramp up to simulate EMA crossover golden cross
+          ]
+        }
+      };
+
+      fetch('/api/v1/portfolio/rebalance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(mockPayload)
+      })
+      .then(res => res.json())
+      .then(data => {
+        logToConsole(`Rebalance command status: ${data.status}`, "ws");
+        fetchRESTData();
+      })
+      .catch(err => logToConsole(`Rebalance failed: ${err.message}`, "error"));
+    }
+
+    // --------------------------------------------------
+    // Helper utilities
+    // --------------------------------------------------
+    function formatCurrency(val) {
+      return '₹' + parseFloat(val).toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function logToConsole(text, type = "normal") {
+      const consoleLog = document.getElementById('console-output');
+      const timestamp = new Date().toTimeString().split(' ')[0];
+      
+      const line = document.createElement('div');
+      line.className = 'console-line';
+      
+      let typeSpan = '';
+      if (type === "ws") typeSpan = `<span class="console-type-ws">[STREAM]</span> `;
+      if (type === "error") typeSpan = `<span class="console-type-error">[ERROR]</span> `;
+      
+      line.innerHTML = `<span class="console-timestamp">[${timestamp}]</span> ${typeSpan}${text}`;
+      consoleLog.appendChild(line);
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('console-output').innerHTML = '';
+      logToConsole("Logs cleared.", "normal");
+    }
+
+  </script>
+</body>
+</html>
