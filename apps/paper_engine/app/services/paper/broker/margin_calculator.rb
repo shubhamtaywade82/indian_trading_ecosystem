@@ -1,7 +1,16 @@
 module Paper
   module Broker
     class MarginCalculator
-      def self.calculate(instrument_id:, product_type:, qty:, price:, side:, segment: 'equity')
+      def self.calculate(instrument_id:, product_type:, qty:, price:, side:, segment: nil)
+        # Auto-detect segment from instrument symbol if not specified
+        segment ||= if instrument_id.to_s.match?(/(CE|PE)\z/i)
+                      'options'
+                    elsif instrument_id.to_s.match?(/FUT/i)
+                      'futures'
+                    else
+                      'equity'
+                    end
+
         # Find requirement config or use conservative defaults
         req = MarginRequirement.find_by(symbol: instrument_id, product_type: product_type)
         

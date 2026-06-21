@@ -9,6 +9,8 @@ module Api
 
         render json: {
           available_cash:   funds&.dig(:available) || 0,
+          blocked_margin:   funds&.dig(:blocked) || 0,
+          cash_balance:     funds&.dig(:cash) || 0,
           total_value:      funds&.dig(:available).to_f + position_value(positions),
           position_count:   positions.is_a?(Hash) ? positions.keys.length : positions&.length || 0,
           positions:        positions
