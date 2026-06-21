@@ -115,3 +115,25 @@ cd ../paper_engine && bundle exec rspec
 # API endpoint and gateway tests
 cd ../core_api && bundle exec rspec
 ```
+
+---
+
+## 6. Syncing Indian Exchanges, Segments & Instruments
+
+The database includes a full **Security Master schema** capable of representing all segments of the Indian markets (NSE, BSE, MCX, Currency F&O). 
+
+To populate the database with all tradeable instruments, ex-dates, expiries, lot sizes, strike prices, and option types, you can run the built-in Rake synchronization task.
+
+### Run Instrument Importer
+Execute the importer in the `core_trading` directory. This downloads the daily scrip master from Dhan HQ's official servers and populates both the core execution loop and primary security master databases:
+```bash
+cd apps/core_trading
+bundle exec rails import:instruments
+```
+
+* **Limit Records (Optional)**: If you wish to only import a small sample subset (e.g., for test environments or quick validation), specify a `LIMIT` variable:
+  ```bash
+  LIMIT=1000 bundle exec rails import:instruments
+  ```
+* **Custom URL (Optional)**: To parse a specific CSV mapping or local file, override the `SCRIP_MASTER_URL` environment variable.
+

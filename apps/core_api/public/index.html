@@ -964,7 +964,7 @@
 
       tbody.innerHTML = '';
       orders.forEach(o => {
-        const id = o.id || o.external_order_id || 'N/A';
+        const id = String(o.id || o.external_order_id || 'N/A');
         const symbol = o.symbol || o.instrument_id || 'UNKNOWN';
         const side = (o.side || 'BUY').toUpperCase();
         const sideClass = side === 'BUY' ? 'badge-buy' : 'badge-sell';

@@ -16,7 +16,10 @@ class ApplicationController < ActionController::API
   def current_runtime_config
     @current_runtime_config ||= begin
       config_name = request.headers['X-Runtime-Config'] || 'main'
-      Core::RuntimeConfig.find_by!(name: config_name)
+      Core::RuntimeConfig.find_by(name: config_name) ||
+        Core::RuntimeConfig.find_by(name: 'paper_trading') ||
+        Core::RuntimeConfig.first ||
+        raise(ActiveRecord::RecordNotFound, "No runtime configurations found.")
     end
   end
 
