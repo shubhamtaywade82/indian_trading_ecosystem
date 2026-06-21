@@ -16,7 +16,10 @@ RSpec.describe Execution::PaperEngineAdapter do
       payload = { instrument_id: 'RELIANCE', side: 'buy', qty: 10 }
       expect(client_double).to receive(:post).with(
         '/api/v1/orders',
-        payload.merge(account_id: 'ACC_123')
+        {
+          order: { instrument_id: 'RELIANCE', side: 'buy', qty: 10, product_type: 'CNC' },
+          account_id: 'ACC_123'
+        }
       ).and_return({ success: true, data: { order_id: 'P_ORD_123' } })
 
       res = adapter.place_order(payload)
@@ -44,10 +47,12 @@ RSpec.describe Execution::PaperEngineAdapter do
       expect(client_double).to receive(:get).with(
         '/api/v1/positions',
         account_id: 'ACC_123'
-      ).and_return({ success: true, data: [{ symbol: 'RELIANCE', qty: 10 }] })
+      ).and_return({ success: true, data: [{ instrument_id: 'RELIANCE', qty: 10, avg_price: 2500.0 }] })
 
       res = adapter.positions
-      expect(res).to eq([{ symbol: 'RELIANCE', qty: 10 }])
+      expect(res).to eq({
+        'RELIANCE' => { qty: 10, value: 25000.0, avg_price: 2500.0 }
+      })
     end
   end
 

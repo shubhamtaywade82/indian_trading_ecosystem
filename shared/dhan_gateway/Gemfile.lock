@@ -9,8 +9,8 @@ PATH
   specs:
     dhan_gateway (0.1.0)
       domain_models (~> 0.1)
-      faraday (~> 2.9)
-      faraday-retry (~> 2.2)
+      faraday (>= 1.0, < 3.0)
+      faraday-retry (>= 1.0, < 3.0)
 
 GEM
   remote: https://rubygems.org/

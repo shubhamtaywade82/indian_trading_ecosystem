@@ -10,9 +10,17 @@ module Execution
     end
 
     def place_order(payload)
-      # In microservice: HTTP POST to paper_engine/api/orders
-      # In monorepo: call PlaceOrder service directly (shared DB)
-      response = paper_engine_client.post('/api/v1/orders', payload.merge(account_id: @account_id))
+      # Wrap order attributes in the :order key expected by paper_engine controller
+      order_data = payload.slice(
+        :instrument_id, :side, :order_type, :product_type, :qty, :price,
+        :trigger_price, :tif, :strategy_id, :client_order_id
+      )
+      order_data[:product_type] ||= 'CNC'
+      body = {
+        order: order_data,
+        account_id: @account_id
+      }
+      response = paper_engine_client.post('/api/v1/orders', body)
       parse_response(response)
     end
 
@@ -22,7 +30,21 @@ module Execution
 
     def positions
       response = paper_engine_client.get('/api/v1/positions', account_id: @account_id)
-      parse_response(response)
+      data = parse_response(response)
+      return {} unless data.is_a?(Array)
+
+      pos_hash = {}
+      data.each do |p|
+        inst_id = p[:instrument_id]
+        qty = p[:qty].to_i
+        avg_price = p[:avg_price].to_f
+        pos_hash[inst_id] = {
+          qty: qty,
+          value: qty * avg_price,
+          avg_price: avg_price
+        }
+      end
+      pos_hash
     end
 
     def holdings
