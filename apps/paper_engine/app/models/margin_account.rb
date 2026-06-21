@@ -8,10 +8,14 @@ class MarginAccount < ApplicationRecord
     
     actual_cash = LedgerEntry.where(account_id: account_id, ledger_account: 'cash').sum(:debit) - 
                   LedgerEntry.where(account_id: account_id, ledger_account: 'cash').sum(:credit)
+                  
+    actual_pnl = LedgerEntry.where(account_id: account_id, ledger_account: 'realized_pnl').sum(:credit) -
+                 LedgerEntry.where(account_id: account_id, ledger_account: 'realized_pnl').sum(:debit)
     
     update!(
       cash_balance: actual_cash,
-      available_margin: actual_cash - blocked_margin
+      available_margin: actual_cash - blocked_margin,
+      realized_pnl: actual_pnl
     )
   end
 
