@@ -6,16 +6,27 @@ module Api
       # GET /api/v1/instruments
       def index
         instruments = if params[:q].present?
-                        Core::Instrument.where("symbol ILIKE ? OR name ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%").limit(20)
+                        Instrument.includes(:exchange)
+                                  .where("symbol ILIKE ? OR trading_symbol ILIKE ? OR name ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%", "%#{params[:q]}%")
+                                  .limit(20)
                       else
-                        Core::Instrument.limit(50)
+                        Instrument.includes(:exchange).limit(50)
                       end
-        render json: instruments
+
+        render json: instruments.map { |inst|
+          {
+            id: inst.id,
+            symbol: inst.trading_symbol || inst.symbol,
+            trading_symbol: inst.trading_symbol,
+            exchange: inst.exchange&.code,
+            instrument_type: inst.instrument_type
+          }
+        }
       end
 
       # GET /api/v1/instruments/:id
       def show
-        instrument = Core::Instrument.find(params[:id])
+        instrument = Instrument.find(params[:id])
         render json: instrument
       end
     end
