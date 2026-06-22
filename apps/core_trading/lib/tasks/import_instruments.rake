@@ -37,6 +37,12 @@ namespace :import do
       raw_segment = row['SEM_SEGMENT'] || row['SEGMENT']
       symbol = row['SM_SYMBOL_NAME'] || row['SYMBOL_NAME']
       trading_symbol = row['SEM_TRADING_SYMBOL'] || row['TRADING_SYMBOL'] || row['SEM_CUSTOM_SYMBOL'] || row['DISPLAY_NAME']
+      
+      # Extract underlying/fallback symbol from trading_symbol for derivatives if symbol is blank
+      if symbol.blank? && trading_symbol.present?
+        symbol = trading_symbol.split('-').first
+      end
+
       security_id = row['SEM_SMST_SECURITY_ID'] || row['SEM_SM_ID'] || row['SEM_SECURITY_ID'] || row['security_id'] || row['UNDERLYING_SECURITY_ID']
       isin = row['SEM_ISIN'] || row['ISIN']
       inst_type = row['SEM_EXCH_INSTRUMENT_TYPE'] || row['INSTRUMENT_TYPE'] || row['SEM_INSTRUMENT_NAME'] || row['INSTRUMENT']
@@ -47,6 +53,9 @@ namespace :import do
       underlying_sym = row['UNDERLYING_SYMBOL'] || symbol
 
       next if symbol.blank? || exch_code.blank? || security_id.blank?
+
+      target_symbols = ['NIFTY', 'BANKNIFTY', 'SENSEX', 'RELIANCE', 'TCS', 'INFY']
+      next unless target_symbols.include?(underlying_sym&.to_s&.upcase) || target_symbols.include?(symbol&.to_s&.upcase)
 
       # 1. Populating the primary Security Master (exchanges, segments, instruments, derivatives)
       exchange = Exchange.find_or_create_by!(code: exch_code) do |e|
@@ -69,7 +78,7 @@ namespace :import do
 
       # Parse standardized type
       mapped_type = inst_type.to_s.downcase
-      normalized_type = if mapped_type.include?('opt')
+      normalized_type = if mapped_type.include?('opt') || mapped_type == 'op'
                           'option'
                         elsif mapped_type.include?('fut')
                           'future'
@@ -90,7 +99,12 @@ namespace :import do
       }
 
       # Primary Instrument
-      instrument = Instrument.find_by(symbol: symbol, exchange_id: exchange.id)
+      instrument = if %w[option future].include?(normalized_type)
+                     Instrument.find_by(security_id: security_id.to_i)
+                   else
+                     Instrument.find_by(symbol: symbol, exchange_id: exchange.id)
+                   end
+
       if instrument
         # Update security_id if it was a temporary placeholder
         if instrument.security_id >= 900_000_000
