@@ -46,7 +46,12 @@ module Api
         market_data = params.require(:market_data).to_unsafe_h.transform_keys(&:to_s)
                             .transform_values { |candles| candles.map(&:symbolize_keys) }
 
-        strategies = [Strategy::EmaXoverMomentum.new(short_period: 9, long_period: 21)]
+        strategies = if params[:strategy_id] == "options_buying_naked"
+                        [Strategy::OptionsBuyingNaked.new(short_period: 9, long_period: 21, strike_style: "ATM")]
+                      else
+                        [Strategy::EmaXoverMomentum.new(short_period: 9, long_period: 21)]
+                      end
+
         loop_runner = Core::TradingLoop.new(current_runtime_config, mandate, strategies)
         loop_runner.run!(market_data)
 

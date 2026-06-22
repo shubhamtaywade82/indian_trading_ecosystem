@@ -36,7 +36,8 @@ module Api
       def registered_strategies
         [
           Strategy::EmaXoverMomentum.new(short_period: 9,  long_period: 21),
-          Strategy::EmaXoverMomentum.new(short_period: 5,  long_period: 13)
+          Strategy::EmaXoverMomentum.new(short_period: 5,  long_period: 13),
+          Strategy::OptionsBuyingNaked.new(short_period: 9, long_period: 21, strike_style: "ATM")
         ]
       end
     end
