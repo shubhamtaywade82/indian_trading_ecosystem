@@ -43,6 +43,11 @@ namespace :import do
         symbol = trading_symbol.split('-').first
       end
 
+      # Normalize index symbol names to match standard underlyings
+      if symbol == 'BSXOPT'
+        symbol = 'SENSEX'
+      end
+
       security_id = row['SEM_SMST_SECURITY_ID'] || row['SEM_SM_ID'] || row['SEM_SECURITY_ID'] || row['security_id'] || row['UNDERLYING_SECURITY_ID']
       isin = row['SEM_ISIN'] || row['ISIN']
       inst_type = row['SEM_EXCH_INSTRUMENT_TYPE'] || row['INSTRUMENT_TYPE'] || row['SEM_INSTRUMENT_NAME'] || row['INSTRUMENT']
