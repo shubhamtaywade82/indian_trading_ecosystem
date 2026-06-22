@@ -37,7 +37,10 @@ module Api
         [
           Strategy::EmaXoverMomentum.new(short_period: 9,  long_period: 21),
           Strategy::EmaXoverMomentum.new(short_period: 5,  long_period: 13),
-          Strategy::OptionsBuyingNaked.new(short_period: 9, long_period: 21, strike_style: "ATM")
+          Strategy::OptionsBuyingNaked.new(short_period: 9, long_period: 21, strike_style: "ATM"),
+          Strategy::OpeningRangeBreakout.new(orb_minutes: 15, strike_style: "ATM"),
+          Strategy::TripleTimeframeAlignment.new(short_ema_period: 20, long_ema_period: 50, strike_style: "ATM"),
+          Strategy::VixMeanReversion.new(vix_percentile_threshold: 20.0, vix_compression_bars: 3, vix_rise_pct: 0.05, strike_style: "ATM")
         ]
       end
     end

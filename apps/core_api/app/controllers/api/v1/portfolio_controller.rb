@@ -46,8 +46,15 @@ module Api
         market_data = params.require(:market_data).to_unsafe_h.transform_keys(&:to_s)
                             .transform_values { |candles| candles.map(&:symbolize_keys) }
 
-        strategies = if params[:strategy_id] == "options_buying_naked"
+        strategies = case params[:strategy_id]
+                      when "options_buying_naked"
                         [Strategy::OptionsBuyingNaked.new(short_period: 9, long_period: 21, strike_style: "ATM")]
+                      when "opening_range_breakout"
+                        [Strategy::OpeningRangeBreakout.new(orb_minutes: 15, strike_style: "ATM")]
+                      when "triple_timeframe_alignment"
+                        [Strategy::TripleTimeframeAlignment.new(short_ema_period: 20, long_ema_period: 50, strike_style: "ATM")]
+                      when "vix_mean_reversion"
+                        [Strategy::VixMeanReversion.new(vix_percentile_threshold: 20.0, vix_compression_bars: 3, vix_rise_pct: 0.05, strike_style: "ATM")]
                       else
                         [Strategy::EmaXoverMomentum.new(short_period: 9, long_period: 21)]
                       end
