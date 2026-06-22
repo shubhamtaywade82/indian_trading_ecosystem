@@ -8,12 +8,11 @@ module Portfolio
       total_confidence = signals.sum(&:confidence)
       return target_weights if total_confidence == 0
 
-      # Naive conviction-weighted allocation
       signals.each do |signal|
         # Skip shorts if mandate doesn't allow, but let's assume long-only for now
         next unless signal.buy?
 
-        weight = signal.confidence / total_confidence.to_f
+        weight = signal.metadata[:target_weight] || (signal.confidence / total_confidence.to_f)
         # Cap at mandate max weight
         weight = [weight, mandate.max_weight_per_asset].min
         

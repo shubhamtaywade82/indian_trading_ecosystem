@@ -7,12 +7,25 @@ module Risk
     def self.check(order:, portfolio_state:, mandate:)
       checks = [
         check_max_notional(order, portfolio_state, mandate),
-        check_mandate_weight(order, portfolio_state, mandate)
+        check_mandate_weight(order, portfolio_state, mandate),
+        check_drawdown(order, portfolio_state, mandate)
       ]
 
       failure = checks.find { |c| !c[:pass] }
       return failure if failure
 
+      { pass: true }
+    end
+
+    def self.check_drawdown(order, portfolio_state, mandate)
+      drawdown = portfolio_state[:drawdown].to_f
+      if drawdown > mandate.max_drawdown
+        return {
+          pass: false,
+          code: 'MAX_DRAWDOWN_BREACH',
+          reason: "Portfolio drawdown #{(drawdown * 100).round(1)}% exceeds max drawdown of #{(mandate.max_drawdown * 100).round(1)}%"
+        }
+      end
       { pass: true }
     end
 
