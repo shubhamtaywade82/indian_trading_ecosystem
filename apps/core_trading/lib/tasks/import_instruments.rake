@@ -90,7 +90,18 @@ namespace :import do
       }
 
       # Primary Instrument
-      instrument = Instrument.find_or_initialize_by(security_id: security_id.to_i)
+      instrument = Instrument.find_by(symbol: symbol, exchange_id: exchange.id)
+      if instrument
+        # Update security_id if it was a temporary placeholder
+        if instrument.security_id >= 900_000_000
+          # We need to update the primary key column or delete and recreate
+          # Let's delete the placeholder so we can save the new one cleanly without PG duplicate key errors
+          instrument.destroy
+          instrument = Instrument.new(security_id: security_id.to_i)
+        end
+      else
+        instrument = Instrument.new(security_id: security_id.to_i)
+      end
       instrument.assign_attributes(instrument_attrs)
       
       if instrument.save
@@ -101,7 +112,18 @@ namespace :import do
           expiry = Date.parse(expiry_str) rescue nil
           if expiry
             # Find or create underlying instrument record
-            underlying_inst = Instrument.find_by(symbol: underlying_sym, instrument_type: ['equity', 'index'])
+            underlying_inst = Instrument.find_by(symbol: underlying_sym, exchange_id: exchange.id)
+            unless underlying_inst
+              # Create a placeholder underlying instrument
+              underlying_inst = Instrument.create!(
+                security_id: 900_000_000 + rand(99_999_999),
+                symbol: underlying_sym,
+                exchange: exchange,
+                segment: segment,
+                instrument_type: underlying_sym.to_s.upcase.include?('NIFTY') || underlying_sym.to_s.upcase.include?('SENSEX') ? 'index' : 'equity',
+                active: true
+              )
+            end
             if underlying_inst
               underlying = Underlying.find_or_create_by!(instrument: underlying_inst, asset_class: underlying_inst.instrument_type.titleize)
               
