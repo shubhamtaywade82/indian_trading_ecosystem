@@ -17,7 +17,7 @@ echo -e "${CYAN}=====================================================${RESET}"
 # 1. Start Infrastructure via Docker
 echo -e "\n${YELLOW}[1/3] Spinning up PostgreSQL & Redis containers...${RESET}"
 if command -v docker-compose &> /dev/null; then
-  docker-compose -f infrastructure/docker-compose.yml up -d postgres redis
+  docker-compose -f infrastructure/docker-compose.yml up -d --remove-orphans postgres redis
   echo -e "${GREEN}✔ Infrastructure container services started in background.${RESET}"
 else
   echo -e "${RED}✘ docker-compose not found. Please ensure PostgreSQL is running on port 5434 and Redis on 6380 locally.${RESET}"

@@ -1,7 +1,7 @@
 # Start services for Indian Trading Ecosystem
 
 # Infrastructure
-redis_db: docker-compose -f infrastructure/docker-compose.yml up postgres redis
+redis_db: docker-compose -f infrastructure/docker-compose.yml up --remove-orphans postgres redis
 
 # Core Paper Engine (Port 3001)
 paper_engine: sleep 3 && cd apps/paper_engine && bundle exec rails server -p 3001
